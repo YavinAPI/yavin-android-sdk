@@ -1,16 +1,15 @@
 package com.yavin.yavinandroidsdk
 
 import android.app.Application
-import android.util.Log
 import com.yavin.yavinandroidsdk.files.impl.YavinFilesManagerImpl
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.config.YavinLoggerConfig
 import com.yavin.yavinandroidsdk.logger.impl.YavinLoggerImpl
 
-class MyApplication: Application(), YavinLogger.YavinLoggerCallback {
+class MyApplication : Application(), YavinLogger.YavinLoggerCallback {
 
-   private val yavinFilesManager = YavinFilesManagerImpl()
-   private lateinit var yavinLogger: YavinLogger
+    private val yavinFilesManager = YavinFilesManagerImpl()
+    private lateinit var yavinLogger: YavinLogger
 
     override fun onCreate() {
         super.onCreate()
@@ -31,9 +30,6 @@ class MyApplication: Application(), YavinLogger.YavinLoggerCallback {
     }
 
     override fun onAppCrashed(exception: Throwable) {
-        val file = yavinLogger.getMostRecentLogsFile(this)
-        file?.forEachLine {
-            Log.d("File", it)
-        }
+        // Send crash log by email if needed
     }
 }

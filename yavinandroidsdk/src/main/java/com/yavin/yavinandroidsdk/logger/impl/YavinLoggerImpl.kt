@@ -7,8 +7,12 @@ import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.config.YavinLoggerConfig
 import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerNotInitializedException
 import com.yavin.yavinandroidsdk.logger.utils.LogsUtils
+import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
 import com.yavin.yavinandroidsdk.logger.utils.getCrashText
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -19,29 +23,19 @@ class YavinLoggerImpl constructor(
     private val yavinFilesManager: YavinFilesManager
 ) : YavinLogger {
 
-    companion object {
-        private const val LOG_DIRECTORY = "logs"
-        private const val DATE_FORMAT = "yyyy-MM-dd"
-
-        /**
-         * Format of the date in the header of the logs
-         */
-        const val DATETIME_LOGS_HEADER_FORMAT = "yyyy-MM-dd\' \'HH:mm:ss"
-    }
-
     private var isInitialized = false
 
-    private val dateFilenameFormatter = SimpleDateFormat(DATE_FORMAT, Locale.US)
-    private val datetimeLogsHeaderFormatter = SimpleDateFormat(DATETIME_LOGS_HEADER_FORMAT, Locale.US)
+    private val dateFilenameFormatter = SimpleDateFormat(YavinLoggerConstants.DATE_FORMAT, Locale.US)
+    private val datetimeLogsHeaderFormatter = SimpleDateFormat(YavinLoggerConstants.DATETIME_LOGS_HEADER_FORMAT, Locale.US)
 
     private val filename: String
         get() {
             val now = Date()
-            return "${dateFilenameFormatter.format(now)}.txt"
+            return buildFilenameFromDate(now)
         }
 
     private val logFile: File by lazy {
-        yavinFilesManager.getFileFromDirectory(applicationContext, LOG_DIRECTORY, filename)
+        yavinFilesManager.getFileFromDirectory(applicationContext, YavinLoggerConstants.LOG_DIRECTORY, filename)
     }
 
     private var defaultUncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
@@ -66,8 +60,17 @@ class YavinLoggerImpl constructor(
         }
     }
 
-    override fun getMostRecentLogsFile(context: Context): File? {
-        return yavinFilesManager.getMostRecentFromDirectory(context, LOG_DIRECTORY)
+    private fun buildFilenameFromDate(date: Date): String {
+        return "${dateFilenameFormatter.format(date)}.txt"
+    }
+
+    override fun getLogsFiles(context: Context): List<File> {
+        return yavinFilesManager.getFilesFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, true) ?: emptyList()
+    }
+
+    override fun getLogsFile(context: Context, date: Date): File {
+        val fileName = buildFilenameFromDate(date)
+        return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, fileName)
     }
 
     private fun internalLog(message: String, isCrash: Boolean) {
@@ -76,12 +79,12 @@ class YavinLoggerImpl constructor(
 
         val callerFunction = LogsUtils.getCallerInfo(Thread.currentThread())
 
-        val logHeader = if(isCrash) "$datetimeHeader: " else "$datetimeHeader: [$callerFunction]"
+        val logHeader = if (isCrash) "$datetimeHeader: " else "$datetimeHeader: [$callerFunction]"
 
         var lineToLog = "$logHeader $message"
         lineToLog = lineToLog.replace("\n", "\n$logHeader")
 
-        if(isCrash) {
+        if (isCrash) {
             logFile.appendText("$lineToLog\n")
         } else {
             scope.launch {
