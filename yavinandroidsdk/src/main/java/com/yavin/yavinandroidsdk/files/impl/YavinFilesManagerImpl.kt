@@ -34,11 +34,19 @@ class YavinFilesManagerImpl : YavinFilesManager {
         return File(root, fileName)
     }
 
-    override fun getFilesFromDirectory(context: Context, directoryName: String): List<File>? {
+    override fun getFilesFromDirectory(context: Context, directoryName: String, orderByDate: Boolean): List<File>? {
         val root = getRootFolder(context)
         val directory = File(root, directoryName)
         if (directory.isDirectory) {
-            return directory.listFiles { f -> f.isFile }?.toList()
+            val files = directory.listFiles { f -> f.isFile }?.toList()
+
+            return if (orderByDate) {
+                files?.sortedByDescending {
+                    it.lastModified()
+                }
+            } else {
+                files
+            }
         }
 
         return null
@@ -75,14 +83,5 @@ class YavinFilesManagerImpl : YavinFilesManager {
         } else {
             false
         }
-    }
-
-    override fun getMostRecentFromDirectory(context: Context, directoryName: String): File? {
-        val files = getFilesFromDirectory(context, directoryName)
-        val recent = files?.maxByOrNull {
-            it.lastModified()
-        }
-
-        return recent
     }
 }
