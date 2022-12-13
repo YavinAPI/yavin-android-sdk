@@ -1,6 +1,9 @@
 package com.yavin.yavinandroidsdk.logger.impl
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
+import android.os.Bundle
 import com.yavin.yavinandroidsdk.files.YavinFilesManager
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.actions.Action
@@ -40,9 +43,37 @@ class YavinLoggerImpl constructor(
 
     private var defaultUncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
 
-    override fun init(config: YavinLoggerConfig, callback: YavinLogger.YavinLoggerCallback) {
-        setCrashInterceptor(callback)
+    private val activityCallback = object : Application.ActivityLifecycleCallbacks {
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+            onActivityStateChanged(activity.localClassName, "CREATED")
+        }
 
+        override fun onActivityStarted(activity: Activity) {
+            onActivityStateChanged(activity.localClassName, "STARTED")
+        }
+
+        override fun onActivityResumed(activity: Activity) {
+            onActivityStateChanged(activity.localClassName, "RESUMED")
+        }
+
+        override fun onActivityPaused(activity: Activity) {
+            onActivityStateChanged(activity.localClassName, "PAUSED")
+        }
+
+        override fun onActivityStopped(activity: Activity) {
+            onActivityStateChanged(activity.localClassName, "STOPPED")
+        }
+
+        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+            onActivityStateChanged(activity.localClassName, "SAVE_INSTANCE_STATE")
+        }
+
+        override fun onActivityDestroyed(activity: Activity) {
+            onActivityStateChanged(activity.localClassName, "DESTROYED")
+        }
+    }
+
+    override fun init(config: YavinLoggerConfig) {
         val version = "${config.applicationVersionName} (${config.applicationVersionCode})"
         val initialLog = "\n    ====> New session: '${config.applicationName}' - $version ${Date()} <=====    \n"
         internalLog(initialLog, false)
@@ -50,7 +81,15 @@ class YavinLoggerImpl constructor(
         isInitialized = true
     }
 
-    private fun setCrashInterceptor(callback: YavinLogger.YavinLoggerCallback) {
+    private fun checkInitialization() {
+        if (!isInitialized) {
+            throw YavinLoggerNotInitializedException()
+        }
+    }
+
+    override fun setCrashInterceptor(callback: YavinLogger.YavinLoggerCallback) {
+        checkInitialization()
+
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
             internalLog("Application crashed with following reason: ${exception.getCrashText()}", isCrash = true)
@@ -60,15 +99,26 @@ class YavinLoggerImpl constructor(
         }
     }
 
+    override fun registerActivityLifecycleCallbacks(application: Application) {
+        checkInitialization()
+        application.registerActivityLifecycleCallbacks(activityCallback)
+    }
+
+    private fun onActivityStateChanged(activityName: String, state: String) {
+        log("$activityName $state")
+    }
+
     private fun buildFilenameFromDate(date: Date): String {
         return "${dateFilenameFormatter.format(date)}.txt"
     }
 
     override fun getLogsFiles(context: Context): List<File> {
+        checkInitialization()
         return yavinFilesManager.getFilesFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, true) ?: emptyList()
     }
 
     override fun getLogsFile(context: Context, date: Date): File {
+        checkInitialization()
         val fileName = buildFilenameFromDate(date)
         return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, fileName)
     }
@@ -79,7 +129,7 @@ class YavinLoggerImpl constructor(
 
         val callerFunction = LogsUtils.getCallerInfo(Thread.currentThread())
 
-        val logHeader = if (isCrash) "$datetimeHeader: " else "$datetimeHeader: [$callerFunction]"
+        val logHeader = if (isCrash) "$datetimeHeader: " else "$datetimeHeader: $callerFunction"
 
         var lineToLog = "$logHeader $message"
         lineToLog = lineToLog.replace("\n", "\n$logHeader")
@@ -94,18 +144,12 @@ class YavinLoggerImpl constructor(
     }
 
     override fun log(message: String) {
-        if (!isInitialized) {
-            throw YavinLoggerNotInitializedException()
-        }
-
+        checkInitialization()
         internalLog(message, false)
     }
 
     override fun log(action: Action) {
-        if (!isInitialized) {
-            throw YavinLoggerNotInitializedException()
-        }
-
+        checkInitialization()
         internalLog(action.describeAction(), false)
     }
 }

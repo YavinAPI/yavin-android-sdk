@@ -22,7 +22,9 @@ class MyApplication : Application(), YavinLogger.YavinLoggerCallback {
             BuildConfig.VERSION_CODE
         )
 
-        yavinLogger.init(yavinLoggerConfig, this)
+        yavinLogger.init(yavinLoggerConfig)
+        yavinLogger.setCrashInterceptor(this)
+        yavinLogger.registerActivityLifecycleCallbacks(this)
     }
 
     fun logger(): YavinLogger {
