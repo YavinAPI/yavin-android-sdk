@@ -1,4 +1,4 @@
-package com.yavin.yavinandroidsdk.logger.ui
+package com.yavin.yavinandroidsdk.logger.ui.validator
 
 import com.google.android.material.datepicker.CalendarConstraints.DateValidator
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
