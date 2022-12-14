@@ -3,6 +3,9 @@ package com.yavin.yavinandroidsdk.logger.impl
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import androidx.navigation.NavController
 import com.yavin.yavinandroidsdk.files.YavinFilesManager
@@ -15,6 +18,8 @@ import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerNotInitializedExce
 import com.yavin.yavinandroidsdk.logger.utils.LogsUtils
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
 import com.yavin.yavinandroidsdk.logger.utils.getCrashText
+import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
+import com.yavin.yavinandroidsdk.network.YavinConnectivityProviderImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,7 +32,7 @@ class YavinLoggerImpl constructor(
     applicationContext: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     private val yavinFilesManager: YavinFilesManager
-) : YavinLogger {
+) : YavinLogger, YavinConnectivityProvider.ConnectivityStateListener {
 
     private var isInitialized = false
 
@@ -139,6 +144,15 @@ class YavinLoggerImpl constructor(
         internalLog("Activity \"$activityName\" state is: $state", appendCaller = false, isCrash = false)
     }
 
+    override fun registerConnectivityListener(context: Context) {
+        checkInitialization()
+
+        val cm = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val connectivityProvider: YavinConnectivityProvider = YavinConnectivityProviderImpl(cm, wm)
+        connectivityProvider.addListener(this)
+    }
+
     private fun buildFilenameFromDate(date: Date): String {
         return "${dateFilenameFormatter.format(date)}.txt"
     }
@@ -188,5 +202,15 @@ class YavinLoggerImpl constructor(
     override fun log(action: Action) {
         checkInitialization()
         internalLog(action.describeAction(), appendCaller = true, isCrash = false)
+    }
+
+    override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
+        val networkType = when(state.networkTransportType) {
+            NetworkCapabilities.TRANSPORT_WIFI -> "Wifi"
+            NetworkCapabilities.TRANSPORT_ETHERNET -> "Ethernet"
+            NetworkCapabilities.TRANSPORT_CELLULAR -> "Cellular"
+            else -> "Unknown"
+        }
+        internalLog("Connectivity changed: (type: $networkType, has Internet: ${state.hasInternet}).", appendCaller = false, isCrash = false)
     }
 }

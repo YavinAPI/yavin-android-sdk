@@ -12,6 +12,7 @@ interface YavinLogger {
     fun setCrashInterceptor(callback: YavinLoggerCallback)
     fun registerActivityLifecycleCallbacks(application: Application)
     fun registerNavControllerDestinationChangeListener()
+    fun registerConnectivityListener(context: Context)
 
     fun log(message: String)
     fun log(action: Action)

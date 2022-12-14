@@ -26,6 +26,7 @@ class MyApplication : Application(), YavinLogger.YavinLoggerCallback {
         yavinLogger.setCrashInterceptor(this)
         yavinLogger.registerActivityLifecycleCallbacks(this)
         yavinLogger.registerNavControllerDestinationChangeListener()
+        yavinLogger.registerConnectivityListener(this)
     }
 
     fun logger(): YavinLogger {
