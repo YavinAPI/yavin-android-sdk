@@ -11,6 +11,7 @@ interface YavinLogger {
     fun init(config: YavinLoggerConfig)
     fun setCrashInterceptor(callback: YavinLoggerCallback)
     fun registerActivityLifecycleCallbacks(application: Application)
+    fun registerNavControllerDestinationChangeListener()
 
     fun log(message: String)
     fun log(action: Action)
@@ -22,6 +23,3 @@ interface YavinLogger {
         fun onAppCrashed(exception: Throwable)
     }
 }
-
-
-

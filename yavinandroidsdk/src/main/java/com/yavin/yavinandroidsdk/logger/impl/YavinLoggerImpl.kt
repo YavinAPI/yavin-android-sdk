@@ -4,10 +4,13 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import androidx.navigation.NavController
 import com.yavin.yavinandroidsdk.files.YavinFilesManager
 import com.yavin.yavinandroidsdk.logger.YavinLogger
+import com.yavin.yavinandroidsdk.logger.YavinLoggerNavigableActivity
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.config.YavinLoggerConfig
+import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerMissingImplementationException
 import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerNotInitializedException
 import com.yavin.yavinandroidsdk.logger.utils.LogsUtils
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
@@ -43,6 +46,13 @@ class YavinLoggerImpl constructor(
 
     private var defaultUncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
 
+    private var registerNavControllerDestinationChangedListener = false
+
+    private val onDestinationChangedListener = NavController.OnDestinationChangedListener { controller, destination, arguments ->
+        val label = destination.label?.toString() ?: applicationContext.resources.getResourceEntryName(destination.id)
+        internalLog("Destination changed to screen with label \"$label\".", appendCaller = false, isCrash = false)
+    }
+
     private val activityCallback = object : Application.ActivityLifecycleCallbacks {
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
             onActivityStateChanged(activity.localClassName, "CREATED")
@@ -54,10 +64,26 @@ class YavinLoggerImpl constructor(
 
         override fun onActivityResumed(activity: Activity) {
             onActivityStateChanged(activity.localClassName, "RESUMED")
+
+            if (registerNavControllerDestinationChangedListener) {
+                if (activity is YavinLoggerNavigableActivity) {
+                    activity.getNavController().addOnDestinationChangedListener(onDestinationChangedListener)
+                } else {
+                    throw YavinLoggerMissingImplementationException()
+                }
+            }
         }
 
         override fun onActivityPaused(activity: Activity) {
             onActivityStateChanged(activity.localClassName, "PAUSED")
+
+            if (registerNavControllerDestinationChangedListener) {
+                if (activity is YavinLoggerNavigableActivity) {
+                    activity.getNavController().removeOnDestinationChangedListener(onDestinationChangedListener)
+                } else {
+                    throw YavinLoggerMissingImplementationException()
+                }
+            }
         }
 
         override fun onActivityStopped(activity: Activity) {
@@ -76,7 +102,7 @@ class YavinLoggerImpl constructor(
     override fun init(config: YavinLoggerConfig) {
         val version = "${config.applicationVersionName} (${config.applicationVersionCode})"
         val initialLog = "\n    ====> New session: '${config.applicationName}' - $version ${Date()} <=====    \n"
-        internalLog(initialLog, false)
+        internalLog(initialLog, appendCaller = true, isCrash = false)
 
         isInitialized = true
     }
@@ -92,7 +118,7 @@ class YavinLoggerImpl constructor(
 
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
-            internalLog("Application crashed with following reason: ${exception.getCrashText()}", isCrash = true)
+            internalLog("Application crashed with following reason: ${exception.getCrashText()}", appendCaller = false, isCrash = true)
             callback.onAppCrashed(exception)
 
             defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
@@ -104,8 +130,13 @@ class YavinLoggerImpl constructor(
         application.registerActivityLifecycleCallbacks(activityCallback)
     }
 
+    override fun registerNavControllerDestinationChangeListener() {
+        checkInitialization()
+        registerNavControllerDestinationChangedListener = true
+    }
+
     private fun onActivityStateChanged(activityName: String, state: String) {
-        log("$activityName $state")
+        internalLog("Activity \"$activityName\" state is: $state", appendCaller = false, isCrash = false)
     }
 
     private fun buildFilenameFromDate(date: Date): String {
@@ -123,13 +154,19 @@ class YavinLoggerImpl constructor(
         return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, fileName)
     }
 
-    private fun internalLog(message: String, isCrash: Boolean) {
+    private fun internalLog(message: String, appendCaller: Boolean, isCrash: Boolean) {
         val now = Date()
         val datetimeHeader = datetimeLogsHeaderFormatter.format(now)
 
         val callerFunction = LogsUtils.getCallerInfo(Thread.currentThread())
 
-        val logHeader = if (isCrash) "$datetimeHeader: " else "$datetimeHeader: $callerFunction"
+        val logHeader = if (isCrash) {
+            "$datetimeHeader: "
+        } else if(appendCaller) {
+            "$datetimeHeader: $callerFunction"
+        } else {
+            "$datetimeHeader: [YL]"
+        }
 
         var lineToLog = "$logHeader $message"
         lineToLog = lineToLog.replace("\n", "\n$logHeader")
@@ -145,11 +182,11 @@ class YavinLoggerImpl constructor(
 
     override fun log(message: String) {
         checkInitialization()
-        internalLog(message, false)
+        internalLog(message, appendCaller = true, isCrash = false)
     }
 
     override fun log(action: Action) {
         checkInitialization()
-        internalLog(action.describeAction(), false)
+        internalLog(action.describeAction(), appendCaller = true, isCrash = false)
     }
 }
