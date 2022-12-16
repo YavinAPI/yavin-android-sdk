@@ -2,22 +2,18 @@ package com.yavin.yavinandroidsdk.logger.workers
 
 import android.content.Context
 import android.util.Log
-import androidx.hilt.work.HiltWorker
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.yavin.yavinandroidsdk.files.utils.YavinFilesUtils
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-@HiltWorker
-class YavinLoggerCleanerWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
+class YavinLoggerCleanerWorker constructor(
+    context: Context,
+    workerParams: WorkerParameters,
     private val yavinLogger: YavinLogger
 ) : Worker(context.applicationContext, workerParams) {
 

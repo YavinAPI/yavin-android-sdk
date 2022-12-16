@@ -7,10 +7,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.Bundle
+import androidx.lifecycle.LiveData
 import androidx.navigation.NavController
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
+import androidx.work.*
 import com.yavin.yavinandroidsdk.files.YavinFilesManager
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.YavinLoggerNavigableActivity
@@ -22,6 +21,7 @@ import com.yavin.yavinandroidsdk.logger.utils.LogsUtils
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
 import com.yavin.yavinandroidsdk.logger.utils.getCrashText
 import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerCleanerWorker
+import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerUploaderWorker
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProviderImpl
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -207,6 +207,16 @@ class YavinLoggerImpl @Inject constructor(
         checkInitialization()
         val fileName = buildFilenameFromDate(date, "gz")
         return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.ARCHIVES_DIRECTORY, fileName)
+    }
+
+    override fun launchUploaderWorker(context: Context, date: Date): LiveData<List<WorkInfo>> {
+        val workManager = WorkManager.getInstance(context.applicationContext)
+
+        val requestName = YavinLoggerUploaderWorker.getWorkerTagName(date)
+        val workRequest = YavinLoggerUploaderWorker.buildRequest(requestName, date)
+        workManager.enqueueUniqueWork(requestName, ExistingWorkPolicy.KEEP, workRequest)
+
+        return workManager.getWorkInfosForUniqueWorkLiveData(requestName)
     }
 
     private fun internalLog(message: String, appendCaller: Boolean, isCrash: Boolean) {
