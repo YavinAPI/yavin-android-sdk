@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Parcelize
-class YavinFileDateValidator(private val filesName: List<String>) : DateValidator {
+class YavinFileDateValidator(private val filesName: Map<String, Boolean>) : DateValidator {
 
     @IgnoredOnParcel
     private val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
@@ -19,6 +19,6 @@ class YavinFileDateValidator(private val filesName: List<String>) : DateValidato
     override fun isValid(date: Long): Boolean {
         utc.timeInMillis = date
         val formattedDate = dateFilenameFormatter.format(utc.time)
-        return filesName.contains(formattedDate)
+        return filesName.containsKey(formattedDate)
     }
 }

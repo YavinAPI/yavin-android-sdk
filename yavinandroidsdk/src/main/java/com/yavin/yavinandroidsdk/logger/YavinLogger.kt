@@ -9,16 +9,22 @@ import java.util.*
 
 interface YavinLogger {
     fun init(config: YavinLoggerConfig)
+    fun getLoggerConfig(): YavinLoggerConfig
+
     fun setCrashInterceptor(callback: YavinLoggerCallback)
     fun registerActivityLifecycleCallbacks(application: Application)
     fun registerNavControllerDestinationChangeListener()
     fun registerConnectivityListener(context: Context)
+    fun registerCleanerWorker(context: Context)
 
     fun log(message: String)
     fun log(action: Action)
 
     fun getLogsFiles(context: Context): List<File>
     fun getLogsFile(context: Context, date: Date): File
+
+    fun getArchivesFiles(context: Context): List<File>
+    fun getArchivesFile(context: Context, date: Date): File
 
     interface YavinLoggerCallback {
         fun onAppCrashed(exception: Throwable)
