@@ -2,6 +2,8 @@ package com.yavin.yavinandroidsdk.logger
 
 import android.app.Application
 import android.content.Context
+import androidx.lifecycle.LiveData
+import androidx.work.WorkInfo
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.config.YavinLoggerConfig
 import java.io.File
@@ -16,6 +18,7 @@ interface YavinLogger {
     fun registerNavControllerDestinationChangeListener()
     fun registerConnectivityListener(context: Context)
     fun registerCleanerWorker(context: Context)
+    fun launchUploaderWorker(context: Context, date: Date): LiveData<List<WorkInfo>>
 
     fun log(message: String)
     fun log(action: Action)

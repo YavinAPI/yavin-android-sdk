@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="yavin_logger_uploader_channel_name">Yavin Logger Uploader</string>
+    <string name="yavin_logger_uploader_channel_description">Worker that will show a notification when a log file is being uploaded</string>
+    <string name="yavin_logger_uploader_notification_title">Yavin Logger</string>
+    <string name="yavin_logger_uploader_notification_message">Log file upload is in progress</string>
+</resources>

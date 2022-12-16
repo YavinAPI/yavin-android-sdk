@@ -1,46 +1,36 @@
 package com.yavin.yavinandroidsdk
 
 import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.DelegatingWorkerFactory
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.config.YavinLoggerConfig
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EarlyEntryPoint
-import dagger.hilt.android.EarlyEntryPoints
+import com.yavin.yavinandroidsdk.logger.workers.factory.YavinLoggerWorkerFactory
 import dagger.hilt.android.HiltAndroidApp
-import dagger.hilt.components.SingletonComponent
+import java.util.Calendar
+import java.util.Date
 import javax.inject.Inject
 
 @HiltAndroidApp
 class MyApplication : Application(), Configuration.Provider, YavinLogger.YavinLoggerCallback {
 
-    @EarlyEntryPoint
-    @InstallIn(SingletonComponent::class)
-    interface ApplicationEarlyEntryPoint {
-        fun workerFactory(): HiltWorkerFactory
-    }
-
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
-
     @Inject
     lateinit var yavinLogger: YavinLogger
 
-    private fun initHiltInjection() {
-        EarlyEntryPoints.get(this, ApplicationEarlyEntryPoint::class.java).apply {
-            workerFactory = workerFactory()
-        }
-    }
+    @Inject
+    lateinit var uploaderRepository: MyLoggerUploaderRepository
 
-    override fun getWorkManagerConfiguration(): Configuration =
-        Configuration.Builder()
-            .setWorkerFactory(workerFactory)
+    override fun getWorkManagerConfiguration(): Configuration {
+        val myWorkerFactory = DelegatingWorkerFactory()
+        myWorkerFactory.addFactory(YavinLoggerWorkerFactory(yavinLogger, uploaderRepository))
+
+        return Configuration.Builder()
+            .setWorkerFactory(myWorkerFactory)
             .build()
+    }
 
     override fun onCreate() {
         super.onCreate()
-        initHiltInjection()
 
         val yavinLoggerConfig = YavinLoggerConfig(
             BuildConfig.APPLICATION_ID,
@@ -55,6 +45,9 @@ class MyApplication : Application(), Configuration.Provider, YavinLogger.YavinLo
         yavinLogger.registerNavControllerDestinationChangeListener()
         yavinLogger.registerConnectivityListener(this)
         yavinLogger.registerCleanerWorker(this)
+
+        // Upload today's log file
+        yavinLogger.launchUploaderWorker(this, Date())
     }
 
     override fun onAppCrashed(exception: Throwable) {
