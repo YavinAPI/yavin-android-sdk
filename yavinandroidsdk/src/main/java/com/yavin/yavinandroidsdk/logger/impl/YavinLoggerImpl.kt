@@ -8,6 +8,9 @@ import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import androidx.navigation.NavController
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.yavin.yavinandroidsdk.files.YavinFilesManager
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.YavinLoggerNavigableActivity
@@ -18,8 +21,10 @@ import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerNotInitializedExce
 import com.yavin.yavinandroidsdk.logger.utils.LogsUtils
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
 import com.yavin.yavinandroidsdk.logger.utils.getCrashText
+import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerCleanerWorker
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProviderImpl
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,14 +32,23 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class YavinLoggerImpl constructor(
-    applicationContext: Context,
+@Singleton
+class YavinLoggerImpl @Inject constructor(
+    @ApplicationContext applicationContext: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     private val yavinFilesManager: YavinFilesManager
 ) : YavinLogger, YavinConnectivityProvider.ConnectivityStateListener {
 
-    private var isInitialized = false
+    companion object {
+        const val TAG_CLEANER_WORKER = "tag_yavin_logger_cleaner_worker"
+        const val NAME_CLEANER_WORKER = "yavin_logger_cleaner_worker"
+    }
+
+    private var config: YavinLoggerConfig? = null
 
     private val dateFilenameFormatter = SimpleDateFormat(YavinLoggerConstants.DATE_FORMAT, Locale.US)
     private val datetimeLogsHeaderFormatter = SimpleDateFormat(YavinLoggerConstants.DATETIME_LOGS_HEADER_FORMAT, Locale.US)
@@ -42,12 +56,16 @@ class YavinLoggerImpl constructor(
     private val filename: String
         get() {
             val now = Date()
-            return buildFilenameFromDate(now)
+            return buildFilenameFromDate(now, "txt")
         }
 
     private val logFile: File by lazy {
         yavinFilesManager.getFileFromDirectory(applicationContext, YavinLoggerConstants.LOG_DIRECTORY, filename)
     }
+
+    private val cleanerWorkerRequest = PeriodicWorkRequestBuilder<YavinLoggerCleanerWorker>(1, TimeUnit.DAYS)
+        .addTag(TAG_CLEANER_WORKER)
+        .build()
 
     private var defaultUncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
 
@@ -105,15 +123,27 @@ class YavinLoggerImpl constructor(
     }
 
     override fun init(config: YavinLoggerConfig) {
+        this.config = config
         val version = "${config.applicationVersionName} (${config.applicationVersionCode})"
         val initialLog = "\n    ====> New session: '${config.applicationName}' - $version ${Date()} <=====    \n"
         internalLog(initialLog, appendCaller = true, isCrash = false)
+    }
 
-        isInitialized = true
+    override fun registerCleanerWorker(context: Context) {
+        checkInitialization()
+
+        WorkManager
+            .getInstance(context.applicationContext)
+            .enqueueUniquePeriodicWork(NAME_CLEANER_WORKER, ExistingPeriodicWorkPolicy.REPLACE, cleanerWorkerRequest)
+    }
+
+    override fun getLoggerConfig(): YavinLoggerConfig {
+        checkInitialization()
+        return config!!
     }
 
     private fun checkInitialization() {
-        if (!isInitialized) {
+        if (config == null) {
             throw YavinLoggerNotInitializedException()
         }
     }
@@ -153,8 +183,8 @@ class YavinLoggerImpl constructor(
         connectivityProvider.addListener(this)
     }
 
-    private fun buildFilenameFromDate(date: Date): String {
-        return "${dateFilenameFormatter.format(date)}.txt"
+    private fun buildFilenameFromDate(date: Date, extension: String): String {
+        return "${dateFilenameFormatter.format(date)}.$extension"
     }
 
     override fun getLogsFiles(context: Context): List<File> {
@@ -164,8 +194,19 @@ class YavinLoggerImpl constructor(
 
     override fun getLogsFile(context: Context, date: Date): File {
         checkInitialization()
-        val fileName = buildFilenameFromDate(date)
+        val fileName = buildFilenameFromDate(date, "txt")
         return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, fileName)
+    }
+
+    override fun getArchivesFiles(context: Context): List<File> {
+        checkInitialization()
+        return yavinFilesManager.getFilesFromDirectory(context, YavinLoggerConstants.ARCHIVES_DIRECTORY, true) ?: emptyList()
+    }
+
+    override fun getArchivesFile(context: Context, date: Date): File {
+        checkInitialization()
+        val fileName = buildFilenameFromDate(date, "gz")
+        return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.ARCHIVES_DIRECTORY, fileName)
     }
 
     private fun internalLog(message: String, appendCaller: Boolean, isCrash: Boolean) {
@@ -176,7 +217,7 @@ class YavinLoggerImpl constructor(
 
         val logHeader = if (isCrash) {
             "$datetimeHeader: "
-        } else if(appendCaller) {
+        } else if (appendCaller) {
             "$datetimeHeader: $callerFunction"
         } else {
             "$datetimeHeader: [YL]"
@@ -205,11 +246,11 @@ class YavinLoggerImpl constructor(
     }
 
     override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
-        val networkType = when(state.networkTransportType) {
-            NetworkCapabilities.TRANSPORT_WIFI -> "Wifi"
-            NetworkCapabilities.TRANSPORT_ETHERNET -> "Ethernet"
-            NetworkCapabilities.TRANSPORT_CELLULAR -> "Cellular"
-            else -> "Unknown"
+        val networkType = when (state.networkTransportType) {
+            NetworkCapabilities.TRANSPORT_WIFI -> "WIFI"
+            NetworkCapabilities.TRANSPORT_ETHERNET -> "ETHERNET"
+            NetworkCapabilities.TRANSPORT_CELLULAR -> "CELLULAR"
+            else -> "UNKNOWN (${state.networkTransportType})"
         }
         internalLog("Connectivity changed: (type: $networkType, has Internet: ${state.hasInternet}).", appendCaller = false, isCrash = false)
     }
