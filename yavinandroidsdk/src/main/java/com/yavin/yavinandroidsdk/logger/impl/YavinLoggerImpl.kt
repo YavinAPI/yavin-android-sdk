@@ -24,7 +24,6 @@ import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerCleanerWorker
 import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerUploaderWorker
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProviderImpl
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,12 +32,9 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class YavinLoggerImpl @Inject constructor(
-    @ApplicationContext applicationContext: Context,
+class YavinLoggerImpl(
+    applicationContext: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     private val yavinFilesManager: YavinFilesManager
 ) : YavinLogger, YavinConnectivityProvider.ConnectivityStateListener {
