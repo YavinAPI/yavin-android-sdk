@@ -44,6 +44,7 @@ class YavinLoggerImpl(
         const val NAME_CLEANER_WORKER = "yavin_logger_cleaner_worker"
     }
 
+    private lateinit var application: Application
     private var config: YavinLoggerConfig? = null
 
     private val dateFilenameFormatter = SimpleDateFormat(YavinLoggerConstants.DATE_FORMAT, Locale.US)
@@ -118,24 +119,29 @@ class YavinLoggerImpl(
         }
     }
 
-    override fun init(config: YavinLoggerConfig) {
-        this.config = config
-        val version = "${config.applicationVersionName} (${config.applicationVersionCode})"
-        val initialLog = "\n    ====> New session: '${config.applicationName}' - $version ${Date()} <=====    \n"
+    override fun init(application: Application, applicationName: String, applicationVersionName: String, applicationVersionCode: Int): YavinLogger {
+        this.application = application
+        this.config = YavinLoggerConfig(applicationName, applicationVersionName, applicationVersionCode, 30)
+
+        val version = "${config!!.applicationVersionName} (${config!!.applicationVersionCode})"
+        val initialLog = "\n    =====> New session: '${config!!.applicationName}' - $version ${Date()} <=====    \n"
         internalLog(initialLog, appendCaller = true, isCrash = false)
+        return this
     }
 
-    override fun registerCleanerWorker(context: Context) {
+    override fun registerCleanerWorker(deleteAfterInDays: Int): YavinLogger {
         checkInitialization()
+        config = config!!.copy(deleteAfterInDays = deleteAfterInDays)
 
         WorkManager
-            .getInstance(context.applicationContext)
+            .getInstance(application.applicationContext)
             .enqueueUniquePeriodicWork(NAME_CLEANER_WORKER, ExistingPeriodicWorkPolicy.REPLACE, cleanerWorkerRequest)
+        return this
     }
 
-    override fun getLoggerConfig(): YavinLoggerConfig {
+    override fun getNumberOfDaysBeforeCleaning(): Int {
         checkInitialization()
-        return config!!
+        return config!!.deleteAfterInDays
     }
 
     private fun checkInitialization() {
@@ -144,7 +150,7 @@ class YavinLoggerImpl(
         }
     }
 
-    override fun setCrashInterceptor(callback: YavinLogger.YavinLoggerCallback) {
+    override fun setCrashInterceptor(callback: YavinLogger.YavinLoggerCallback): YavinLogger {
         checkInitialization()
 
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -154,29 +160,34 @@ class YavinLoggerImpl(
 
             defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
         }
+
+        return this
     }
 
-    override fun registerActivityLifecycleCallbacks(application: Application) {
+    override fun setActivityLifecycleCallbacks(): YavinLogger {
         checkInitialization()
         application.registerActivityLifecycleCallbacks(activityCallback)
+        return this
     }
 
-    override fun registerNavControllerDestinationChangeListener() {
+    override fun setNavControllerDestinationChangeListener(): YavinLogger {
         checkInitialization()
         registerNavControllerDestinationChangedListener = true
+        return this
     }
 
     private fun onActivityStateChanged(activityName: String, state: String) {
         internalLog("Activity \"$activityName\" state is: $state", appendCaller = false, isCrash = false)
     }
 
-    override fun registerConnectivityListener(context: Context) {
+    override fun setConnectivityListener(): YavinLogger {
         checkInitialization()
 
-        val cm = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val cm = application.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val wm = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val connectivityProvider: YavinConnectivityProvider = YavinConnectivityProviderImpl(cm, wm)
         connectivityProvider.addListener(this)
+        return this
     }
 
     private fun buildFilenameFromDate(date: Date, extension: String): String {
@@ -206,6 +217,7 @@ class YavinLoggerImpl(
     }
 
     override fun launchUploaderWorker(context: Context, date: Date): LiveData<List<WorkInfo>> {
+        checkInitialization()
         val workManager = WorkManager.getInstance(context.applicationContext)
 
         val requestName = YavinLoggerUploaderWorker.getWorkerTagName(date)

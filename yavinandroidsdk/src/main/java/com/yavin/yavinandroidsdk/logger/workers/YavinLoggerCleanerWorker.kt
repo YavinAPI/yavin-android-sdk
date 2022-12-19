@@ -94,7 +94,7 @@ class YavinLoggerCleanerWorker constructor(
         now.set(Calendar.MINUTE, 0)
         now.set(Calendar.SECOND, 0)
         now.set(Calendar.MILLISECOND, 0)
-        return (now.timeInMillis - fileDate.time) > daysToMillis(yavinLogger.getLoggerConfig().deleteAfterInDays)
+        return (now.timeInMillis - fileDate.time) > daysToMillis(yavinLogger.getNumberOfDaysBeforeCleaning())
     }
 
     private fun shouldArchiveFile(file: File, fileDate: Date): Boolean {
