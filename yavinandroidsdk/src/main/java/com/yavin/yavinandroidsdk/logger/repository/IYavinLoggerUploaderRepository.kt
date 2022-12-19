@@ -1,8 +1,9 @@
 package com.yavin.yavinandroidsdk.logger.repository
 
+import android.content.Context
 import androidx.work.ListenableWorker
 import java.io.File
 
 interface IYavinLoggerUploaderRepository {
-    fun uploadFile(file: File): ListenableWorker.Result
+    suspend fun uploadFile(context: Context, file: File): ListenableWorker.Result
 }

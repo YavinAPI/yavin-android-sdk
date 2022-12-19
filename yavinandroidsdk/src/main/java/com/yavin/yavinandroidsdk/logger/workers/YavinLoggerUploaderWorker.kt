@@ -64,13 +64,13 @@ class YavinLoggerUploaderWorker constructor(
         val fileToUpload = yavinLogger.getLogsFile(applicationContext, date)
 
         return@withContext if (fileToUpload.exists() && fileToUpload.isFile) {
-            repository.uploadFile(fileToUpload)
+            repository.uploadFile(applicationContext, fileToUpload)
         } else {
             val compressedFile = yavinLogger.getArchivesFile(applicationContext, date)
             if(compressedFile.exists() && compressedFile.isFile) {
                 val destinationFile = yavinLogger.getLogsFile(applicationContext, date)
                 YavinFilesUtils.uncompressFile(compressedFile, destinationFile)
-                repository.uploadFile(destinationFile)
+                repository.uploadFile(applicationContext, destinationFile)
             } else {
                 val outputData = Data.Builder().apply {
                     putString(KEY_OUTPUT_DATA_RESULT, KEY_OUTPUT_DATA_FILE_NOT_FOUND)
