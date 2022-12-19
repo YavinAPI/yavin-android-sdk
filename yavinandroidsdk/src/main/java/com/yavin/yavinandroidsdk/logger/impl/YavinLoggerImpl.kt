@@ -7,6 +7,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.Bundle
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.navigation.NavController
 import androidx.work.*
@@ -15,7 +16,6 @@ import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.YavinLoggerNavigableActivity
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.config.YavinLoggerConfig
-import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerMissingImplementationException
 import com.yavin.yavinandroidsdk.logger.exceptions.YavinLoggerNotInitializedException
 import com.yavin.yavinandroidsdk.logger.utils.LogsUtils
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
@@ -89,7 +89,7 @@ class YavinLoggerImpl(
                 if (activity is YavinLoggerNavigableActivity) {
                     activity.getNavController().addOnDestinationChangedListener(onDestinationChangedListener)
                 } else {
-                    throw YavinLoggerMissingImplementationException()
+                    Log.i("YavinLogger", "${activity.localClassName} is not implementing YavinLoggerNavigableActivity")
                 }
             }
         }
@@ -101,7 +101,7 @@ class YavinLoggerImpl(
                 if (activity is YavinLoggerNavigableActivity) {
                     activity.getNavController().removeOnDestinationChangedListener(onDestinationChangedListener)
                 } else {
-                    throw YavinLoggerMissingImplementationException()
+                    Log.i("YavinLogger", "${activity.localClassName} is not implementing YavinLoggerNavigableActivity")
                 }
             }
         }
