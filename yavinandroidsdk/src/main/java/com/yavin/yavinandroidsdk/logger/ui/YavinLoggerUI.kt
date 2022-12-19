@@ -3,11 +3,9 @@ package com.yavin.yavinandroidsdk.logger.ui
 import android.content.Context
 import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.MaterialDatePicker
-import com.yavin.yavinandroidsdk.files.utils.YavinFilesUtils
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.ui.validator.YavinFileDateValidator
 import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -61,33 +59,15 @@ object YavinLoggerUI {
             .build()
 
         datePicker.addOnPositiveButtonClickListener { timeInMillis ->
-            val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+            val calendar = Calendar.getInstance()
             calendar.timeInMillis = timeInMillis
-            val date = calendar.time
-            val selectedDate = dateFilenameFormatter.format(date)
-
-            // Get file and uncompress it if it is gzipped
-            if (filesName.containsKey(selectedDate)) {
-                val archived = filesName[selectedDate]!!
-                val file = if (archived) {
-                    val archivedFile = yavinLogger.getArchivesFile(context, date)
-                    val destinationFile = yavinLogger.getLogsFile(context, date)
-                    YavinFilesUtils.uncompressFile(archivedFile, destinationFile)
-                    destinationFile
-                } else {
-                    yavinLogger.getLogsFile(context, calendar.time)
-                }
-
-                if (file.exists()) {
-                    callback.onYavinLoggerFileSelected(file)
-                }
-            }
+            callback.onYavinLoggerFileSelected(calendar.time)
         }
 
         return datePicker
     }
 
     interface YavinLoggerUICallback {
-        fun onYavinLoggerFileSelected(file: File)
+        fun onYavinLoggerFileSelected(date: Date)
     }
 }
