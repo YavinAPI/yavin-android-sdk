@@ -105,6 +105,7 @@ class YavinLoggerUploaderWorker constructor(
         return NotificationCompat.Builder(applicationContext, YAVIN_NOTIFICATION_CHANNEL_ID)
             .setContentTitle(applicationContext.getString(R.string.yavin_logger_uploader_notification_title))
             .setContentText(applicationContext.getString(R.string.yavin_logger_uploader_notification_message))
+            .setSmallIcon(R.drawable.ic_file_upload)
             .build()
     }
 }
