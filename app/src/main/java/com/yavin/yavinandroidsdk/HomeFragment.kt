@@ -92,11 +92,7 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         throw IllegalStateException()
     }
 
-    override fun onYavinLoggerFileSelected(file: File) {
-        if (file.exists()) {
-            file.forEachLine {
-                Log.d("File", it)
-            }
-        }
+    override fun onYavinLoggerFileSelected(date: Date) {
+        // Get log file from date
     }
 }
