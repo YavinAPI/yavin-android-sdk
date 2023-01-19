@@ -47,8 +47,10 @@ class YavinLoggerImpl(
     private lateinit var application: Application
     private var config: YavinLoggerConfig? = null
 
-    private val dateFilenameFormatter = SimpleDateFormat(YavinLoggerConstants.DATE_FORMAT, Locale.US)
-    private val datetimeLogsHeaderFormatter = SimpleDateFormat(YavinLoggerConstants.DATETIME_LOGS_HEADER_FORMAT, Locale.US)
+    private val dateFilenameFormatter =
+        SimpleDateFormat(YavinLoggerConstants.DATE_FORMAT, Locale.US)
+    private val datetimeLogsHeaderFormatter =
+        SimpleDateFormat(YavinLoggerConstants.DATETIME_LOGS_HEADER_FORMAT, Locale.US)
 
     private val filename: String
         get() {
@@ -57,21 +59,34 @@ class YavinLoggerImpl(
         }
 
     private val logFile: File by lazy {
-        yavinFilesManager.getFileFromDirectory(applicationContext, YavinLoggerConstants.LOG_DIRECTORY, filename)
+        yavinFilesManager.getFileFromDirectory(
+            applicationContext,
+            YavinLoggerConstants.LOG_DIRECTORY,
+            filename
+        )
     }
 
-    private val cleanerWorkerRequest = PeriodicWorkRequestBuilder<YavinLoggerCleanerWorker>(1, TimeUnit.DAYS)
-        .addTag(TAG_CLEANER_WORKER)
-        .build()
+    private val cleanerWorkerRequest =
+        PeriodicWorkRequestBuilder<YavinLoggerCleanerWorker>(1, TimeUnit.DAYS)
+            .addTag(TAG_CLEANER_WORKER)
+            .build()
 
     private var defaultUncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
 
     private var registerNavControllerDestinationChangedListener = false
 
-    private val onDestinationChangedListener = NavController.OnDestinationChangedListener { controller, destination, arguments ->
-        val label = destination.label?.toString() ?: applicationContext.resources.getResourceEntryName(destination.id)
-        internalLog("Destination changed to screen with label \"$label\".", appendCaller = false, isCrash = false)
-    }
+    private val onDestinationChangedListener =
+        NavController.OnDestinationChangedListener { controller, destination, arguments ->
+            val label =
+                destination.label?.toString() ?: applicationContext.resources.getResourceEntryName(
+                    destination.id
+                )
+            internalLog(
+                "Destination changed to screen with label \"$label\".",
+                appendCaller = false,
+                isCrash = false
+            )
+        }
 
     private val activityCallback = object : Application.ActivityLifecycleCallbacks {
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
@@ -87,9 +102,13 @@ class YavinLoggerImpl(
 
             if (registerNavControllerDestinationChangedListener) {
                 if (activity is YavinLoggerNavigableActivity) {
-                    activity.getNavController().addOnDestinationChangedListener(onDestinationChangedListener)
+                    activity.getNavController()
+                        .addOnDestinationChangedListener(onDestinationChangedListener)
                 } else {
-                    Log.i("YavinLogger", "${activity.localClassName} is not implementing YavinLoggerNavigableActivity")
+                    Log.i(
+                        "YavinLogger",
+                        "${activity.localClassName} is not implementing YavinLoggerNavigableActivity"
+                    )
                 }
             }
         }
@@ -99,9 +118,13 @@ class YavinLoggerImpl(
 
             if (registerNavControllerDestinationChangedListener) {
                 if (activity is YavinLoggerNavigableActivity) {
-                    activity.getNavController().removeOnDestinationChangedListener(onDestinationChangedListener)
+                    activity.getNavController()
+                        .removeOnDestinationChangedListener(onDestinationChangedListener)
                 } else {
-                    Log.i("YavinLogger", "${activity.localClassName} is not implementing YavinLoggerNavigableActivity")
+                    Log.i(
+                        "YavinLogger",
+                        "${activity.localClassName} is not implementing YavinLoggerNavigableActivity"
+                    )
                 }
             }
         }
@@ -119,12 +142,19 @@ class YavinLoggerImpl(
         }
     }
 
-    override fun init(application: Application, applicationName: String, applicationVersionName: String, applicationVersionCode: Int): YavinLogger {
+    override fun init(
+        application: Application,
+        applicationName: String,
+        applicationVersionName: String,
+        applicationVersionCode: Int
+    ): YavinLogger {
         this.application = application
-        this.config = YavinLoggerConfig(applicationName, applicationVersionName, applicationVersionCode, 30)
+        this.config =
+            YavinLoggerConfig(applicationName, applicationVersionName, applicationVersionCode, 30)
 
         val version = "${config!!.applicationVersionName} (${config!!.applicationVersionCode})"
-        val initialLog = "\n    =====> New session: '${config!!.applicationName}' - $version ${Date()} <=====    \n"
+        val initialLog =
+            "\n    =====> New session: '${config!!.applicationName}' - $version ${Date()} <=====    \n"
         internalLog(initialLog, appendCaller = true, isCrash = false)
         return this
     }
@@ -132,10 +162,15 @@ class YavinLoggerImpl(
     override fun registerCleanerWorker(deleteAfterInDays: Int): YavinLogger {
         checkInitialization()
         config = config!!.copy(deleteAfterInDays = deleteAfterInDays)
+        val uniqueWorkName = "${config!!.applicationName}_$NAME_CLEANER_WORKER"
 
         WorkManager
             .getInstance(application.applicationContext)
-            .enqueueUniquePeriodicWork(NAME_CLEANER_WORKER, ExistingPeriodicWorkPolicy.REPLACE, cleanerWorkerRequest)
+            .enqueueUniquePeriodicWork(
+                uniqueWorkName,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                cleanerWorkerRequest
+            )
         return this
     }
 
@@ -155,7 +190,11 @@ class YavinLoggerImpl(
 
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
-            internalLog("Application crashed with following reason: ${exception.getCrashText()}", appendCaller = false, isCrash = true)
+            internalLog(
+                "Application crashed with following reason: ${exception.getCrashText()}",
+                appendCaller = false,
+                isCrash = true
+            )
             callback.onAppCrashed(exception)
 
             defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
@@ -177,14 +216,20 @@ class YavinLoggerImpl(
     }
 
     private fun onActivityStateChanged(activityName: String, state: String) {
-        internalLog("Activity \"$activityName\" state is: $state", appendCaller = false, isCrash = false)
+        internalLog(
+            "Activity \"$activityName\" state is: $state",
+            appendCaller = false,
+            isCrash = false
+        )
     }
 
     override fun setConnectivityListener(): YavinLogger {
         checkInitialization()
 
-        val cm = application.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val wm = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val cm =
+            application.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val wm =
+            application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val connectivityProvider: YavinConnectivityProvider = YavinConnectivityProviderImpl(cm, wm)
         connectivityProvider.addListener(this)
         return this
@@ -196,24 +241,40 @@ class YavinLoggerImpl(
 
     override fun getLogsFiles(context: Context): List<File> {
         checkInitialization()
-        return yavinFilesManager.getFilesFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, true) ?: emptyList()
+        return yavinFilesManager.getFilesFromDirectory(
+            context,
+            YavinLoggerConstants.LOG_DIRECTORY,
+            true
+        ) ?: emptyList()
     }
 
     override fun getLogsFile(context: Context, date: Date): File {
         checkInitialization()
         val fileName = buildFilenameFromDate(date, "txt")
-        return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.LOG_DIRECTORY, fileName)
+        return yavinFilesManager.getFileFromDirectory(
+            context,
+            YavinLoggerConstants.LOG_DIRECTORY,
+            fileName
+        )
     }
 
     override fun getArchivesFiles(context: Context): List<File> {
         checkInitialization()
-        return yavinFilesManager.getFilesFromDirectory(context, YavinLoggerConstants.ARCHIVES_DIRECTORY, true) ?: emptyList()
+        return yavinFilesManager.getFilesFromDirectory(
+            context,
+            YavinLoggerConstants.ARCHIVES_DIRECTORY,
+            true
+        ) ?: emptyList()
     }
 
     override fun getArchivesFile(context: Context, date: Date): File {
         checkInitialization()
         val fileName = buildFilenameFromDate(date, "gz")
-        return yavinFilesManager.getFileFromDirectory(context, YavinLoggerConstants.ARCHIVES_DIRECTORY, fileName)
+        return yavinFilesManager.getFileFromDirectory(
+            context,
+            YavinLoggerConstants.ARCHIVES_DIRECTORY,
+            fileName
+        )
     }
 
     override fun launchUploaderWorker(context: Context, date: Date): LiveData<List<WorkInfo>> {
@@ -221,8 +282,10 @@ class YavinLoggerImpl(
         val workManager = WorkManager.getInstance(context.applicationContext)
 
         val requestName = YavinLoggerUploaderWorker.getWorkerTagName(date)
-        val workRequest = YavinLoggerUploaderWorker.buildRequest(requestName, date)
-        workManager.enqueueUniqueWork(requestName, ExistingWorkPolicy.KEEP, workRequest)
+        val uniqueWorkName = "${config!!.applicationName}_$requestName"
+
+        val workRequest = YavinLoggerUploaderWorker.buildRequest(uniqueWorkName, date)
+        workManager.enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.KEEP, workRequest)
 
         return workManager.getWorkInfosForUniqueWorkLiveData(requestName)
     }
@@ -270,6 +333,10 @@ class YavinLoggerImpl(
             NetworkCapabilities.TRANSPORT_CELLULAR -> "CELLULAR"
             else -> "UNKNOWN (${state.networkTransportType})"
         }
-        internalLog("Connectivity changed: (type: $networkType, has Internet: ${state.hasInternet}).", appendCaller = false, isCrash = false)
+        internalLog(
+            "Connectivity changed: (type: $networkType, has Internet: ${state.hasInternet}).",
+            appendCaller = false,
+            isCrash = false
+        )
     }
 }
