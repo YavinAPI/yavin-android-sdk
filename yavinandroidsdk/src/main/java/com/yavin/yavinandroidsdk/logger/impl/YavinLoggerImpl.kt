@@ -4,9 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -24,7 +22,6 @@ import com.yavin.yavinandroidsdk.logger.utils.getCrashText
 import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerCleanerWorker
 import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerUploaderWorker
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
-import com.yavin.yavinandroidsdk.network.YavinConnectivityProviderImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,7 +34,8 @@ import java.util.concurrent.TimeUnit
 class YavinLoggerImpl(
     applicationContext: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-    private val yavinFilesManager: YavinFilesManager
+    private val yavinFilesManager: YavinFilesManager,
+    private val yavinConnectivityProvider: YavinConnectivityProvider
 ) : YavinLogger, YavinConnectivityProvider.ConnectivityStateListener {
 
     companion object {
@@ -225,13 +223,7 @@ class YavinLoggerImpl(
 
     override fun setConnectivityListener(): YavinLogger {
         checkInitialization()
-
-        val cm =
-            application.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val wm =
-            application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val connectivityProvider: YavinConnectivityProvider = YavinConnectivityProviderImpl(cm, wm)
-        connectivityProvider.addListener(this)
+        yavinConnectivityProvider.addListener(this)
         return this
     }
 

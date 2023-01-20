@@ -5,6 +5,7 @@ import com.yavin.yavinandroidsdk.files.YavinFilesManager
 import com.yavin.yavinandroidsdk.files.impl.YavinFilesManagerImpl
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.impl.YavinLoggerImpl
+import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,8 +27,13 @@ object YavinLoggerModule {
     @Provides
     fun provideYavinLogger(
         @ApplicationContext context: Context,
-        yavinFilesManager: YavinFilesManager
+        yavinFilesManager: YavinFilesManager,
+        yavinConnectivityProvider: YavinConnectivityProvider
     ): YavinLogger {
-        return YavinLoggerImpl(context, yavinFilesManager = yavinFilesManager)
+        return YavinLoggerImpl(
+            context,
+            yavinFilesManager = yavinFilesManager,
+            yavinConnectivityProvider = yavinConnectivityProvider
+        )
     }
 }
