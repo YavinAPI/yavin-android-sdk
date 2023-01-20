@@ -1,4 +1,4 @@
-package com.yavin.yavinandroidsdk.di
+package com.yavin.yavinandroidsdk.logger.di
 
 import android.content.Context
 import com.yavin.yavinandroidsdk.files.YavinFilesManager

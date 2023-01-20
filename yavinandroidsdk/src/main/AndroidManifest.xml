@@ -2,4 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <receiver
+            android:name="com.yavin.yavinandroidsdk.logger.broadcast.YavinLoggerUploadBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.yavin.logger.broadcast.action.ACTION_BROADCAST_UPLOAD_LOG" />
+            </intent-filter>
+        </receiver>
+    </application>
 </manifest>

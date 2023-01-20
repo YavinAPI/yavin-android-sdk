@@ -3,6 +3,7 @@ package com.yavin.yavinandroidsdk.logger.impl
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
@@ -285,6 +286,14 @@ class YavinLoggerImpl(
         workManager.enqueueUniqueWork(requestName, ExistingWorkPolicy.KEEP, workRequest)
 
         return workManager.getWorkInfosForUniqueWorkLiveData(requestName)
+    }
+
+    override fun broadcastLogsUpload(context: Context, date: Date) {
+        Intent().also { intent ->
+            intent.action = YavinLoggerConstants.ACTION_BROADCAST_UPLOAD_LOG
+            intent.putExtra(YavinLoggerConstants.ACTION_BROADCAST_UPLOAD_LOG_ARG_DATE, date)
+            context.sendBroadcast(intent)
+        }
     }
 
     private fun internalLog(message: String, appendCaller: Boolean, isCrash: Boolean) {

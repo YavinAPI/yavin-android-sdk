@@ -1,7 +1,6 @@
 package com.yavin.yavinandroidsdk
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,7 +15,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.util.*
 import javax.inject.Inject
 
@@ -72,6 +70,10 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         binding.crashButton.setOnClickListener {
             crash()
         }
+
+        binding.broadcastUploadButton.setOnClickListener {
+            broadcastUpload(Date())
+        }
     }
 
     private fun showDatePicker() {
@@ -90,6 +92,10 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
 
     private fun crash() {
         throw IllegalStateException()
+    }
+
+    private fun broadcastUpload(date: Date) {
+        yavinLogger.broadcastLogsUpload(requireContext(), date)
     }
 
     override fun onYavinLoggerFileSelected(date: Date) {

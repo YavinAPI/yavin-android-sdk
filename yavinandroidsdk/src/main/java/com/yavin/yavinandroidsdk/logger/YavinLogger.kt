@@ -18,6 +18,7 @@ interface YavinLogger {
     fun getNumberOfDaysBeforeCleaning(): Int
 
     fun launchUploaderWorker(context: Context, date: Date): LiveData<List<WorkInfo>>
+    fun broadcastLogsUpload(context: Context, date: Date)
 
     fun log(message: String)
     fun log(action: Action)
