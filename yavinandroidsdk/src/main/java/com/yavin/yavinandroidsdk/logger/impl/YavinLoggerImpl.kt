@@ -162,12 +162,11 @@ class YavinLoggerImpl(
     override fun registerCleanerWorker(deleteAfterInDays: Int): YavinLogger {
         checkInitialization()
         config = config!!.copy(deleteAfterInDays = deleteAfterInDays)
-        val uniqueWorkName = "${config!!.applicationName}_$NAME_CLEANER_WORKER"
 
         WorkManager
             .getInstance(application.applicationContext)
             .enqueueUniquePeriodicWork(
-                uniqueWorkName,
+                NAME_CLEANER_WORKER,
                 ExistingPeriodicWorkPolicy.REPLACE,
                 cleanerWorkerRequest
             )
@@ -282,10 +281,8 @@ class YavinLoggerImpl(
         val workManager = WorkManager.getInstance(context.applicationContext)
 
         val requestName = YavinLoggerUploaderWorker.getWorkerTagName(date)
-        val uniqueWorkName = "${config!!.applicationName}_$requestName"
-
-        val workRequest = YavinLoggerUploaderWorker.buildRequest(uniqueWorkName, date)
-        workManager.enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.KEEP, workRequest)
+        val workRequest = YavinLoggerUploaderWorker.buildRequest(requestName, date)
+        workManager.enqueueUniqueWork(requestName, ExistingWorkPolicy.KEEP, workRequest)
 
         return workManager.getWorkInfosForUniqueWorkLiveData(requestName)
     }
