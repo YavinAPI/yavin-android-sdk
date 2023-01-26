@@ -57,13 +57,11 @@ class YavinLoggerImpl(
             return buildFilenameFromDate(now, "txt")
         }
 
-    private val logFile: File by lazy {
-        yavinFilesManager.getFileFromDirectory(
-            applicationContext,
-            YavinLoggerConstants.LOG_DIRECTORY,
-            filename
-        )
-    }
+    private var logFile: File = yavinFilesManager.getFileFromDirectory(
+        applicationContext,
+        YavinLoggerConstants.LOG_DIRECTORY,
+        filename
+    )
 
     private val cleanerWorkerRequest =
         PeriodicWorkRequestBuilder<YavinLoggerCleanerWorker>(1, TimeUnit.DAYS)
@@ -289,28 +287,45 @@ class YavinLoggerImpl(
     }
 
     private fun internalLog(message: String, appendCaller: Boolean, isCrash: Boolean) {
-        val now = Date()
-        val datetimeHeader = datetimeLogsHeaderFormatter.format(now)
+        try {
+            val now = Date()
+            val datetimeHeader = datetimeLogsHeaderFormatter.format(now)
 
-        val callerFunction = LogsUtils.getCallerInfo(Thread.currentThread())
+            val callerFunction = LogsUtils.getCallerInfo(Thread.currentThread())
 
-        val logHeader = if (isCrash) {
-            "$datetimeHeader: "
-        } else if (appendCaller) {
-            "$datetimeHeader: $callerFunction"
-        } else {
-            "$datetimeHeader: [YL]"
-        }
-
-        var lineToLog = "$logHeader $message"
-        lineToLog = lineToLog.replace("\n", "\n$logHeader")
-
-        if (isCrash) {
-            logFile.appendText("$lineToLog\n")
-        } else {
-            scope.launch {
-                logFile.appendText("$lineToLog\n")
+            val logHeader = if (isCrash) {
+                "$datetimeHeader: "
+            } else if (appendCaller) {
+                "$datetimeHeader: $callerFunction"
+            } else {
+                "$datetimeHeader: [YL]"
             }
+
+            var lineToLog = "$logHeader $message"
+            lineToLog = lineToLog.replace("\n", "\n$logHeader")
+
+            if (isCrash) {
+                logFile.appendText("$lineToLog\n")
+            } else {
+                scope.launch {
+                    reloadLogFileIfNeeded(now)
+                    logFile.appendText("$lineToLog\n")
+                }
+            }
+        } catch (ex: Throwable) {
+            ex.printStackTrace()
+            Log.e("YavinLogger", "Crashed caused by: ${ex.message}")
+        }
+    }
+
+    private fun reloadLogFileIfNeeded(date: Date) {
+        val nowFilename = buildFilenameFromDate(date, "txt")
+        if (logFile.name != nowFilename) {
+            logFile = yavinFilesManager.getFileFromDirectory(
+                application,
+                YavinLoggerConstants.LOG_DIRECTORY,
+                nowFilename
+            )
         }
     }
 
