@@ -35,10 +35,17 @@ class YavinConnectivityProviderImpl(
 
     private val networkCallback = object : NetworkCallback() {
         override fun onAvailable(network: Network) {
-            Log.v(logName, "onAvailable: $network, ${connectivityManager.getNetworkCapabilities(network)?.let { getTransportFromNetworkCapabilities(it) }}")
+            Log.v(
+                logName,
+                "onAvailable: $network, ${
+                    connectivityManager.getNetworkCapabilities(network)
+                        ?.let { getTransportFromNetworkCapabilities(it) }
+                }"
+            )
             val newNetworkState = NetworkState(
                 false,
-                connectivityManager.getNetworkCapabilities(network)?.let { getTransportFromNetworkCapabilities(it) }
+                connectivityManager.getNetworkCapabilities(network)
+                    ?.let { getTransportFromNetworkCapabilities(it) }
             )
             if (getActiveNetwork() == null && getNetworkState() != newNetworkState) {
                 currentNetworkState = newNetworkState
@@ -110,7 +117,10 @@ class YavinConnectivityProviderImpl(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             connectivityManager.registerDefaultNetworkCallback(networkCallback)
         } else {
-            connectivityManager.registerNetworkCallback(networkRequestBuilder.build(), networkCallback)
+            connectivityManager.registerNetworkCallback(
+                networkRequestBuilder.build(),
+                networkCallback
+            )
         }
     }
 
@@ -127,18 +137,31 @@ class YavinConnectivityProviderImpl(
     override fun isWifiConnected(): Boolean {
         val currentNetwork = getActiveNetwork()
         val caps = connectivityManager.getNetworkCapabilities(currentNetwork)
-        return caps?.hasTransport(TRANSPORT_WIFI) == true && caps.hasCapability(NET_CAPABILITY_INTERNET)
+        return caps?.hasTransport(TRANSPORT_WIFI) == true && caps.hasCapability(
+            NET_CAPABILITY_INTERNET
+        )
+    }
+
+    override fun isMobileDataConnected(): Boolean {
+        val currentNetwork = getActiveNetwork()
+        val caps = connectivityManager.getNetworkCapabilities(currentNetwork)
+        return caps?.hasTransport(TRANSPORT_CELLULAR) == true && caps.hasCapability(
+            NET_CAPABILITY_INTERNET
+        )
     }
 
     override fun isEthernetConnected(): Boolean {
         val currentNetwork = getActiveNetwork()
         val caps = connectivityManager.getNetworkCapabilities(currentNetwork)
-        return caps?.hasTransport(TRANSPORT_ETHERNET) == true && caps.hasCapability(NET_CAPABILITY_INTERNET)
+        return caps?.hasTransport(TRANSPORT_ETHERNET) == true && caps.hasCapability(
+            NET_CAPABILITY_INTERNET
+        )
     }
 
     override fun getLocalIpAddress(): String? {
         try {
-            val linkAddresses = (connectivityManager.getLinkProperties(connectivityManager.activeNetwork) as LinkProperties).linkAddresses
+            val linkAddresses =
+                (connectivityManager.getLinkProperties(connectivityManager.activeNetwork) as LinkProperties).linkAddresses
             val ipAddressV4 = linkAddresses.firstOrNull {
                 it.address.hostAddress?.contains(".") ?: false
             }?.address?.hostAddress
@@ -153,7 +176,8 @@ class YavinConnectivityProviderImpl(
     fun getNetworkState(): NetworkState = currentNetworkState
 
     private fun updateNetworkState() {
-        val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        val capabilities =
+            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         currentNetworkState = if (capabilities != null) {
             NetworkState(
                 hasInternet = capabilities.hasCapability(NET_CAPABILITY_INTERNET),

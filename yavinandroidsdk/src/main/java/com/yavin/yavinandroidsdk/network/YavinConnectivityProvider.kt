@@ -22,6 +22,8 @@ interface YavinConnectivityProvider {
 
     fun isEthernetConnected(): Boolean
 
+    fun isMobileDataConnected(): Boolean
+
     fun getLocalIpAddress(): String?
 
     data class NetworkState(
