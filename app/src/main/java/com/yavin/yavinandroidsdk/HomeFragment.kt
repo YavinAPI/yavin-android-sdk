@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.yavin.yavinandroidsdk.databinding.FragmentHomeBinding
@@ -11,6 +12,7 @@ import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.ui.YavinLoggerUI
 import com.yavin.yavinandroidsdk.model.Person
+import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
@@ -26,6 +28,9 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
 
     @Inject
     lateinit var yavinLogger: YavinLogger
+
+    @Inject
+    lateinit var connectivityProvider: YavinConnectivityProvider
 
     @OptIn(ExperimentalSerializationApi::class)
     private val json = Json {
@@ -74,6 +79,10 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         binding.broadcastUploadButton.setOnClickListener {
             broadcastUpload(Date())
         }
+
+        binding.checkMobileDataButton.setOnClickListener {
+            checkMobileConnection()
+        }
     }
 
     private fun showDatePicker() {
@@ -96,6 +105,12 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
 
     private fun broadcastUpload(date: Date) {
         yavinLogger.broadcastLogsUpload(requireContext(), date)
+    }
+
+    private fun checkMobileConnection() {
+        val mobileDataConnected = connectivityProvider.isMobileDataConnected()
+        Toast.makeText(requireContext(), "4G enabled: $mobileDataConnected ", Toast.LENGTH_LONG)
+            .show()
     }
 
     override fun onYavinLoggerFileSelected(date: Date) {
