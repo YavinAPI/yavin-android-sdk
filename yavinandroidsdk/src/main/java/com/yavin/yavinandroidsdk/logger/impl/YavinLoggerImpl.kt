@@ -73,7 +73,7 @@ class YavinLoggerImpl(
     private var registerNavControllerDestinationChangedListener = false
 
     private val onDestinationChangedListener =
-        NavController.OnDestinationChangedListener { controller, destination, arguments ->
+        NavController.OnDestinationChangedListener { _, destination, _ ->
             val label =
                 destination.label?.toString() ?: applicationContext.resources.getResourceEntryName(
                     destination.id
@@ -187,7 +187,7 @@ class YavinLoggerImpl(
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
             internalLog(
-                "Application crashed with following reason: ${exception.getCrashText()}",
+                exception.getCrashText(),
                 appendCaller = false,
                 isCrash = true
             )
