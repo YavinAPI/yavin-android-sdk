@@ -1,4 +1,4 @@
-package com.yavin.yavinandroidsdk
+package com.yavin.yavinandroidsdk.demo
 
 import android.os.Bundle
 import android.view.LayoutInflater

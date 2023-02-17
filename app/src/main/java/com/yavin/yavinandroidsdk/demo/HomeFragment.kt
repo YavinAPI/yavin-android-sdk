@@ -1,4 +1,4 @@
-package com.yavin.yavinandroidsdk
+package com.yavin.yavinandroidsdk.demo
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,11 +7,12 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.yavin.yavinandroidsdk.databinding.FragmentHomeBinding
+import com.yavin.yavinandroidsdk.demo.databinding.FragmentHomeBinding
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.ui.YavinLoggerUI
-import com.yavin.yavinandroidsdk.model.Person
+import com.yavin.yavinandroidsdk.demo.model.Person
+import com.yavin.yavinandroidsdk.demo.model.toText
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -100,7 +101,14 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
     }
 
     private fun crash() {
-        throw IllegalStateException()
+        val persons = listOf(
+           Person("John", "Cena", 21),
+            null,
+        )
+
+        persons.forEach {
+            it!!.toText()
+        }
     }
 
     private fun broadcastUpload(date: Date) {

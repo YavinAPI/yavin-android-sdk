@@ -1,4 +1,4 @@
-package com.yavin.yavinandroidsdk.model
+package com.yavin.yavinandroidsdk.demo.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -12,3 +12,8 @@ data class Person(
     @SerialName("age")
     val age: Int
 )
+
+
+fun Person.toText(): String {
+    return "$firstName $lastName $age"
+}
