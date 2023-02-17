@@ -1,10 +1,10 @@
-package com.yavin.yavinandroidsdk
+package com.yavin.yavinandroidsdk.demo
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import com.yavin.yavinandroidsdk.databinding.ActivityMainBinding
+import com.yavin.yavinandroidsdk.demo.databinding.ActivityMainBinding
 import com.yavin.yavinandroidsdk.logger.YavinLoggerNavigableActivity
 import dagger.hilt.android.AndroidEntryPoint
 

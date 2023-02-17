@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace 'com.yavin.yavinandroidsdk'
+    namespace 'com.yavin.yavinandroidsdk.demo'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.yavin.yavinandroidsdk"
+        applicationId "com.yavin.yavinandroidsdk.demo"
         minSdk 23
         targetSdk 33
         versionCode 1
@@ -21,12 +21,31 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
+    signingConfigs {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            File propertiesFile = project.file('../release.properties')
+            if (propertiesFile.exists()) {
+                Properties properties = new Properties()
+                properties.load(propertiesFile.newDataInputStream())
+
+                storeFile file(properties.getProperty('keystorePath'))
+                storePassword properties.getProperty('keystorePassword')
+                keyAlias properties.getProperty('keyAlias')
+                keyPassword properties.getProperty('keyPassword')
+            } else {
+                println("release.properties not found")
+            }
         }
     }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11

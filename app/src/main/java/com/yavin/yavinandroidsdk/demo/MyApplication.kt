@@ -1,9 +1,11 @@
-package com.yavin.yavinandroidsdk
+package com.yavin.yavinandroidsdk.demo
 
 import android.app.Application
+import android.util.Log
 import androidx.work.Configuration
 import androidx.work.DelegatingWorkerFactory
 import com.yavin.yavinandroidsdk.logger.YavinLogger
+import com.yavin.yavinandroidsdk.logger.utils.getCrashText
 import com.yavin.yavinandroidsdk.logger.workers.factory.YavinLoggerWorkerFactory
 import dagger.hilt.android.HiltAndroidApp
 import java.util.*
@@ -43,5 +45,6 @@ class MyApplication : Application(), Configuration.Provider, YavinLogger.YavinLo
 
     override fun onAppCrashed(exception: Throwable) {
         // Send crash log by email if needed
+        Log.e("MyApplication", exception.getCrashText())
     }
 }
