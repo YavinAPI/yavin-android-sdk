@@ -1,14 +1,31 @@
 package com.yavin.yavinandroidsdk.network
 
-import android.net.*
+import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
-import android.net.NetworkCapabilities.*
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
+import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
+import android.net.NetworkCapabilities.TRANSPORT_WIFI
+import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider.NetworkState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.InetSocketAddress
+import java.net.Socket
 
 
 class YavinConnectivityProviderImpl(
@@ -17,15 +34,16 @@ class YavinConnectivityProviderImpl(
 ) : YavinConnectivityProvider {
 
     private val logName = this::class.java.simpleName
-
     private val handler = Handler(Looper.getMainLooper())
     private val listeners = mutableSetOf<YavinConnectivityProvider.ConnectivityStateListener>()
     private var subscribed = false
+    private var connectivityPollingJob: Job? = null
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private lateinit var currentNetworkState: NetworkState
 
     init {
-        updateNetworkState()
+        initNetworkStateUsingCapabilitiesOnly()
     }
 
     private val networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
@@ -34,46 +52,34 @@ class YavinConnectivityProviderImpl(
         .addTransportType(TRANSPORT_CELLULAR)
 
     private val networkCallback = object : NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            Log.v(
-                logName,
-                "onAvailable: $network, ${
-                    connectivityManager.getNetworkCapabilities(network)
-                        ?.let { getTransportFromNetworkCapabilities(it) }
-                }"
-            )
-            val newNetworkState = NetworkState(
-                false,
-                connectivityManager.getNetworkCapabilities(network)
-                    ?.let { getTransportFromNetworkCapabilities(it) }
-            )
-            if (getActiveNetwork() == null && getNetworkState() != newNetworkState) {
-                currentNetworkState = newNetworkState
-                dispatchChange(newNetworkState)
-            } else {
-                Log.v(logName, "Already have an active network: ${getActiveNetwork()}")
-            }
-        }
 
         override fun onCapabilitiesChanged(
             network: Network,
             networkCapabilities: NetworkCapabilities
         ) {
             Log.e(logName, "onCapChange: $network, $networkCapabilities")
-            val newNetworkState = NetworkState(
-                networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET),
-                getTransportFromNetworkCapabilities(networkCapabilities)
-            )
 
-            if (getNetworkState() != newNetworkState) {
-                currentNetworkState = newNetworkState
-                dispatchChange(newNetworkState)
+            // If current network has NET_CAPABILITY_INTERNET - start polling
+            if (networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET)) {
+                startPollingConnectivity()
+            } else {
+                //otherwise stop doing that and dispatch no connectivity state
+                stopConnectivityPolling()
+                val newNetworkState = NetworkState(
+                    false,
+                    connectivityManager.getNetworkCapabilities(network)
+                        ?.let { getTransportFromNetworkCapabilities(it) }
+                )
+                if (getNetworkState() != newNetworkState) {
+                    currentNetworkState = newNetworkState
+                    dispatchChange(newNetworkState)
+                }
             }
         }
 
         override fun onLost(network: Network) {
+            stopConnectivityPolling()
             val newNetworkState = NetworkState(false)
-
             if (getNetworkState() != newNetworkState) {
                 currentNetworkState = newNetworkState
                 dispatchChange(newNetworkState)
@@ -93,7 +99,6 @@ class YavinConnectivityProviderImpl(
 
     override fun addListener(listener: YavinConnectivityProvider.ConnectivityStateListener) {
         listeners.add(listener)
-        updateNetworkState()
         listener.onConnectivityStateChange(getNetworkState())
         verifySubscription()
     }
@@ -103,12 +108,93 @@ class YavinConnectivityProviderImpl(
         verifySubscription()
     }
 
+    fun getNetworkState(): NetworkState = currentNetworkState
+
+    private fun initNetworkStateUsingCapabilitiesOnly() {
+        Log.v(logName, "initNetworkStateUsingCapabilities()")
+        val capabilities =
+            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        currentNetworkState = if (capabilities != null) {
+            NetworkState(
+                hasInternet = capabilities.hasCapability(NET_CAPABILITY_INTERNET),
+                networkTransportType = getTransportFromNetworkCapabilities(capabilities)
+            )
+        } else {
+            NetworkState(false)
+        }
+    }
+
+    private fun stopConnectivityPolling() {
+        Log.v(logName, "stopPollingConnectivity()")
+        connectivityPollingJob?.cancel()
+    }
+
+    private fun startPollingConnectivity() {
+        if(connectivityPollingJob?.isActive == true){
+            Log.v(logName, "connectivity polling job IS ACTIVE - ignore startPollingConnectivityService() invocation")
+            return
+        }else{
+            Log.v(logName, "connectivity polling job IS NOT ACTIVE - starting startPollingConnectivityService()")
+        }
+        
+        connectivityPollingJob = coroutineScope.launch {
+            while (isActive) {
+                val hasConnectionToGoogle = connectToGoogleServer()
+                Log.v(logName, "hasConnectionToGoogle = $hasConnectionToGoogle")
+                withContext(Dispatchers.Main) {
+                    ensureActive()
+                    val capabilities =
+                        connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+                    val newNetworkState = NetworkState(
+                        hasInternet = hasConnectionToGoogle,
+                        networkTransportType = if (capabilities != null) {
+                            getTransportFromNetworkCapabilities(capabilities)
+                        } else {
+                            null
+                        }
+                    )
+                    if (currentNetworkState != newNetworkState) {
+                        currentNetworkState = newNetworkState
+                        dispatchChange(newNetworkState)
+                    }
+                    delay(CONNECTIVITY_REQUEST_INTERVAL)
+                }
+            }
+        }
+    }
+
+    private fun connectToGoogleServer(): Boolean {
+        Log.v(logName, "connectToGoogleServer")
+        return try {
+            val socket = Socket()
+            socket.connect(
+                InetSocketAddress(GOOGLE_SERVICE_IP, GOOGLE_SERVICE_PORT),
+                GOOGLE_SERVICE_TIMEOUT
+            )
+            socket.close()
+            true
+        } catch (e: Exception) {
+            Log.v(logName, "connect to google server failed")
+            false
+        }
+    }
+
+    private fun getTransportFromNetworkCapabilities(networkCapabilities: NetworkCapabilities): Int? {
+        return when {
+            networkCapabilities.hasTransport(TRANSPORT_WIFI) -> TRANSPORT_WIFI
+            networkCapabilities.hasTransport(TRANSPORT_CELLULAR) -> TRANSPORT_CELLULAR
+            networkCapabilities.hasTransport(TRANSPORT_ETHERNET) -> TRANSPORT_ETHERNET
+            else -> null
+        }
+    }
+
     private fun verifySubscription() {
         if (!subscribed && listeners.isNotEmpty()) {
             registerNetworkCallback()
             subscribed = true
         } else if (subscribed && listeners.isEmpty()) {
             unregisterNetworkCallback()
+            stopConnectivityPolling()
             subscribed = false
         }
     }
@@ -173,27 +259,10 @@ class YavinConnectivityProviderImpl(
         return null
     }
 
-    fun getNetworkState(): NetworkState = currentNetworkState
-
-    private fun updateNetworkState() {
-        val capabilities =
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        currentNetworkState = if (capabilities != null) {
-            NetworkState(
-                hasInternet = capabilities.hasCapability(NET_CAPABILITY_INTERNET),
-                networkTransportType = getTransportFromNetworkCapabilities(capabilities)
-            )
-        } else {
-            NetworkState(false)
-        }
-    }
-
-    private fun getTransportFromNetworkCapabilities(networkCapabilities: NetworkCapabilities): Int? {
-        return when {
-            networkCapabilities.hasTransport(TRANSPORT_WIFI) -> TRANSPORT_WIFI
-            networkCapabilities.hasTransport(TRANSPORT_CELLULAR) -> TRANSPORT_CELLULAR
-            networkCapabilities.hasTransport(TRANSPORT_ETHERNET) -> TRANSPORT_ETHERNET
-            else -> null
-        }
+    companion object {
+        const val CONNECTIVITY_REQUEST_INTERVAL = 20000L
+        const val GOOGLE_SERVICE_TIMEOUT = 10000
+        const val GOOGLE_SERVICE_IP = "8.8.8.8"
+        const val GOOGLE_SERVICE_PORT = 53
     }
 }
