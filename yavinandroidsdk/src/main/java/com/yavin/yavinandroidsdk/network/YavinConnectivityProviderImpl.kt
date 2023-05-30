@@ -88,6 +88,7 @@ class YavinConnectivityProviderImpl(
     }
 
     private fun dispatchChange(state: NetworkState) {
+        Log.v(logName, "connectivity provider dispatch change. hasInternet = ${state.hasInternet}")
         handler.post {
             for (listener in listeners) {
                 listener.onConnectivityStateChange(state)
@@ -130,13 +131,19 @@ class YavinConnectivityProviderImpl(
     }
 
     private fun startPollingConnectivity() {
-        if(connectivityPollingJob?.isActive == true){
-            Log.v(logName, "connectivity polling job IS ACTIVE - ignore startPollingConnectivityService() invocation")
+        if (connectivityPollingJob?.isActive == true) {
+            Log.v(
+                logName,
+                "connectivity polling job IS ACTIVE - ignore startPollingConnectivityService() invocation"
+            )
             return
-        }else{
-            Log.v(logName, "connectivity polling job IS NOT ACTIVE - starting startPollingConnectivityService()")
+        } else {
+            Log.v(
+                logName,
+                "connectivity polling job IS NOT ACTIVE - starting startPollingConnectivityService()"
+            )
         }
-        
+
         connectivityPollingJob = coroutineScope.launch {
             while (isActive) {
                 val hasConnectionToGoogle = connectToGoogleServer()
