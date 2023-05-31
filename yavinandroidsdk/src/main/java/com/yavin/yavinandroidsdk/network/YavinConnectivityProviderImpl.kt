@@ -59,9 +59,29 @@ class YavinConnectivityProviderImpl(
         ) {
             Log.e(logName, "onCapChange: $network, $networkCapabilities")
 
-            // If current network has NET_CAPABILITY_INTERNET - start polling
             if (networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET)) {
-                startPollingConnectivity()
+
+                if (networkCapabilities.hasTransport(TRANSPORT_WIFI)) {
+                    Log.d(
+                        logName,
+                        "Connected to a wifi network. Do not change connectivity status and start connectivity polling"
+                    )
+                    startPollingConnectivity()
+                } else {
+                    Log.d(
+                        logName,
+                        "Connected to a non-wifi network with NET_CAPABILITY_INTERNET. " +
+                            "Consider that internet connection is active. Do not start connectivity polling"
+                    )
+
+                    val newNetworkState = NetworkState(
+                        true,
+                        connectivityManager.getNetworkCapabilities(network)
+                            ?.let { getTransportFromNetworkCapabilities(it) }
+                    )
+                    setNetworkState(newNetworkState)
+                }
+
             } else {
                 //otherwise stop doing that and dispatch no connectivity state
                 stopConnectivityPolling()
@@ -70,28 +90,27 @@ class YavinConnectivityProviderImpl(
                     connectivityManager.getNetworkCapabilities(network)
                         ?.let { getTransportFromNetworkCapabilities(it) }
                 )
-                if (getNetworkState() != newNetworkState) {
-                    currentNetworkState = newNetworkState
-                    dispatchChange(newNetworkState)
-                }
+                setNetworkState(newNetworkState)
             }
         }
 
         override fun onLost(network: Network) {
             stopConnectivityPolling()
-            val newNetworkState = NetworkState(false)
-            if (getNetworkState() != newNetworkState) {
-                currentNetworkState = newNetworkState
-                dispatchChange(newNetworkState)
-            }
+            setNetworkState(NetworkState(false))
         }
     }
 
-    private fun dispatchChange(state: NetworkState) {
-        Log.v(logName, "connectivity provider dispatch change. hasInternet = ${state.hasInternet}")
-        handler.post {
-            for (listener in listeners) {
-                listener.onConnectivityStateChange(state)
+    private fun setNetworkState(newState: NetworkState) {
+        if (newState != currentNetworkState) {
+            Log.v(
+                logName,
+                "Connectivity state changed. Dispatching new state with hasInternet = ${newState.hasInternet}"
+            )
+            currentNetworkState = newState
+            handler.post {
+                for (listener in listeners) {
+                    listener.onConnectivityStateChange(currentNetworkState)
+                }
             }
         }
     }
@@ -128,6 +147,7 @@ class YavinConnectivityProviderImpl(
     private fun stopConnectivityPolling() {
         Log.v(logName, "stopPollingConnectivity()")
         connectivityPollingJob?.cancel()
+        connectivityPollingJob = null
     }
 
     private fun startPollingConnectivity() {
@@ -160,10 +180,7 @@ class YavinConnectivityProviderImpl(
                             null
                         }
                     )
-                    if (currentNetworkState != newNetworkState) {
-                        currentNetworkState = newNetworkState
-                        dispatchChange(newNetworkState)
-                    }
+                    setNetworkState(newNetworkState)
                     delay(CONNECTIVITY_REQUEST_INTERVAL)
                 }
             }
