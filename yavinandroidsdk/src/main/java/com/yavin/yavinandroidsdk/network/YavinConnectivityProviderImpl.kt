@@ -95,8 +95,13 @@ class YavinConnectivityProviderImpl(
         }
 
         override fun onLost(network: Network) {
+            Log.d(logName, "Network connection lost")
             stopConnectivityPolling()
             setNetworkState(NetworkState(false))
+        }
+
+        override fun onAvailable(network: Network) {
+            Log.d(logName, "New network is available")
         }
     }
 
@@ -214,6 +219,13 @@ class YavinConnectivityProviderImpl(
 
     private fun verifySubscription() {
         if (!subscribed && listeners.isNotEmpty()) {
+            // As PAX A920 running API 25 has sometimes a long delay before
+            // NetworkCallback.onCapabilitiesChanged invocation
+            // (where we are 100% sure the capabilities and transport are guaranteed to be true)
+            // so we have to start polling instantly when 1st listener is subscribed and last known network type is wifi
+            if (currentNetworkState.hasInternet && currentNetworkState.networkTransportType == TRANSPORT_WIFI) {
+                startPollingConnectivity()
+            }
             registerNetworkCallback()
             subscribed = true
         } else if (subscribed && listeners.isEmpty()) {
