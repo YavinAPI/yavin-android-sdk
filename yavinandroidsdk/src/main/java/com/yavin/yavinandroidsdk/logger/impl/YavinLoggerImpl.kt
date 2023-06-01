@@ -9,7 +9,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.navigation.NavController
-import androidx.work.*
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.yavin.yavinandroidsdk.files.YavinFilesManager
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.YavinLoggerNavigableActivity
@@ -28,7 +32,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class YavinLoggerImpl(
@@ -72,6 +77,8 @@ class YavinLoggerImpl(
 
     private var registerNavControllerDestinationChangedListener = false
 
+    private val logName = this::class.java.simpleName
+
     private val onDestinationChangedListener =
         NavController.OnDestinationChangedListener { _, destination, _ ->
             val label =
@@ -84,6 +91,10 @@ class YavinLoggerImpl(
                 isCrash = false
             )
         }
+
+    private var activityLifecycleState: String? = null
+
+    private var useActivityLifecycleForConnectivityChecks: Boolean = false
 
     private val activityCallback = object : Application.ActivityLifecycleCallbacks {
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
@@ -108,6 +119,11 @@ class YavinLoggerImpl(
                     )
                 }
             }
+
+            if (useActivityLifecycleForConnectivityChecks) {
+                Log.d(logName, "Activity resumed - start listening for connectivity changes")
+                yavinConnectivityProvider.addListener(this@YavinLoggerImpl)
+            }
         }
 
         override fun onActivityPaused(activity: Activity) {
@@ -123,6 +139,11 @@ class YavinLoggerImpl(
                         "${activity.localClassName} is not implementing YavinLoggerNavigableActivity"
                     )
                 }
+            }
+
+            if (useActivityLifecycleForConnectivityChecks) {
+                Log.d(logName, "Activity paused - stop listening for connectivity changes")
+                yavinConnectivityProvider.removeListener(this@YavinLoggerImpl)
             }
         }
 
@@ -212,6 +233,7 @@ class YavinLoggerImpl(
     }
 
     private fun onActivityStateChanged(activityName: String, state: String) {
+        activityLifecycleState = state
         internalLog(
             "Activity \"$activityName\" state is: $state",
             appendCaller = false,
@@ -219,9 +241,17 @@ class YavinLoggerImpl(
         )
     }
 
-    override fun setConnectivityListener(): YavinLogger {
+    override fun setConnectivityListener(useActivityLifecycle: Boolean): YavinLogger {
+        Log.d(
+            logName,
+            "setConnectivityListener() use activityLifecycle=$useActivityLifecycle"
+        )
         checkInitialization()
-        yavinConnectivityProvider.addListener(this)
+        useActivityLifecycleForConnectivityChecks = useActivityLifecycle
+        if (!useActivityLifecycle || activityLifecycleState == "RESUMED") {
+            yavinConnectivityProvider.addListener(this)
+        }
+
         return this
     }
 

@@ -36,7 +36,7 @@ class MyApplication : Application(), Configuration.Provider, YavinLogger.YavinLo
             .setCrashInterceptor(this)
             .setActivityLifecycleCallbacks()
             .setNavControllerDestinationChangeListener()
-            .setConnectivityListener()
+            .setConnectivityListener(false)
             .registerCleanerWorker(30)
 
         // Upload today's log file
