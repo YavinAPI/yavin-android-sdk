@@ -5,14 +5,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.yavin.yavinandroidsdk.demo.databinding.FragmentHomeBinding
+import com.yavin.yavinandroidsdk.demo.model.Person
+import com.yavin.yavinandroidsdk.demo.model.toText
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import com.yavin.yavinandroidsdk.logger.ui.YavinLoggerUI
-import com.yavin.yavinandroidsdk.demo.model.Person
-import com.yavin.yavinandroidsdk.demo.model.toText
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -47,6 +48,24 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
+    }
+
+    private val connectivityListener =
+        object : YavinConnectivityProvider.ConnectivityStateListener {
+            override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
+                println("new connectivity state delivered. Internet connected = $state")
+                binding.noConnectivityWarning.isVisible = !state.hasInternet
+            }
+        }
+
+    override fun onStart() {
+        super.onStart()
+        connectivityProvider.addListener(connectivityListener)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        connectivityProvider.removeListener(connectivityListener)
     }
 
     override fun onDestroyView() {
@@ -84,6 +103,10 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         binding.checkMobileDataButton.setOnClickListener {
             checkMobileConnection()
         }
+
+        binding.hasInternetButton.setOnClickListener {
+            checkHasInternet()
+        }
     }
 
     private fun showDatePicker() {
@@ -102,7 +125,7 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
 
     private fun crash() {
         val persons = listOf(
-           Person("John", "Cena", 21),
+            Person("John", "Cena", 21),
             null,
         )
 
@@ -118,6 +141,15 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
     private fun checkMobileConnection() {
         val mobileDataConnected = connectivityProvider.isMobileDataConnected()
         Toast.makeText(requireContext(), "4G enabled: $mobileDataConnected ", Toast.LENGTH_LONG)
+            .show()
+    }
+
+    private fun checkHasInternet() {
+        Toast.makeText(
+            requireContext(),
+            "Has internet: ${connectivityProvider.hasInternet()} ",
+            Toast.LENGTH_LONG
+        )
             .show()
     }
 

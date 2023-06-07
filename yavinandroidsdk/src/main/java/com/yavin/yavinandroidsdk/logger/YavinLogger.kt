@@ -13,7 +13,7 @@ interface YavinLogger {
     fun setCrashInterceptor(callback: YavinLoggerCallback): YavinLogger
     fun setActivityLifecycleCallbacks(): YavinLogger
     fun setNavControllerDestinationChangeListener(): YavinLogger
-    fun setConnectivityListener(): YavinLogger
+    fun setConnectivityListener(useActivityLifecycle: Boolean): YavinLogger
     fun registerCleanerWorker(deleteAfterInDays: Int = 30): YavinLogger
     fun getNumberOfDaysBeforeCleaning(): Int
 
