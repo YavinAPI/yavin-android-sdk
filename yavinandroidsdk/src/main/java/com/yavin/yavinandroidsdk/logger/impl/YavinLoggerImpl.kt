@@ -377,7 +377,7 @@ class YavinLoggerImpl(
             else -> "UNKNOWN (${state.networkTransportType})"
         }
         internalLog(
-            "Connectivity changed: (type: $networkType, has Internet: ${state.hasInternet}).",
+            "Connectivity changed: (type: $networkType, has Internet: ${state.hasInternetCapability}).",
             appendCaller = false,
             isCrash = false
         )

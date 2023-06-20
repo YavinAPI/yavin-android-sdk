@@ -14,7 +14,7 @@ interface YavinConnectivityProvider {
 
     fun removeListener(listener: ConnectivityStateListener)
 
-    fun hasInternet(): Boolean
+    fun hasInternetCapability(): Boolean
 
     fun isWifiEnabled(): Boolean
 
@@ -26,8 +26,10 @@ interface YavinConnectivityProvider {
 
     fun getLocalIpAddress(): String?
 
+    suspend fun testRealInternetConnection(): Boolean
+
     data class NetworkState(
-        val hasInternet: Boolean,
+        val hasInternetCapability: Boolean,
         val networkTransportType: Int? = null
     )
 }
