@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.yavin.yavinandroidsdk.demo.databinding.FragmentHomeBinding
 import com.yavin.yavinandroidsdk.demo.model.Person
@@ -54,7 +55,7 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         object : YavinConnectivityProvider.ConnectivityStateListener {
             override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
                 println("new connectivity state delivered. Internet connected = $state")
-                binding.noConnectivityWarning.isVisible = !state.hasInternet
+                binding.noConnectivityWarning.isVisible = !state.hasInternetCapability
             }
         }
 
@@ -145,12 +146,14 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
     }
 
     private fun checkHasInternet() {
-        Toast.makeText(
-            requireContext(),
-            "Has internet: ${connectivityProvider.hasInternet()} ",
-            Toast.LENGTH_LONG
-        )
-            .show()
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            Toast.makeText(
+                requireContext(),
+                "Has real internet connection: ${connectivityProvider.testRealInternetConnection()} ",
+                Toast.LENGTH_LONG
+            )
+                .show()
+        }
     }
 
     override fun onYavinLoggerFileSelected(date: Date) {

@@ -16,17 +16,10 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider.NetworkState
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
-
 
 class YavinConnectivityProviderImpl(
     private val connectivityManager: ConnectivityManager,
@@ -37,8 +30,6 @@ class YavinConnectivityProviderImpl(
     private val handler = Handler(Looper.getMainLooper())
     private val listeners = mutableSetOf<YavinConnectivityProvider.ConnectivityStateListener>()
     private var subscribed = false
-    private var connectivityPollingJob: Job? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private lateinit var currentNetworkState: NetworkState
 
@@ -57,34 +48,24 @@ class YavinConnectivityProviderImpl(
             network: Network,
             networkCapabilities: NetworkCapabilities
         ) {
-            Log.e(logName, "onCapChange: $network, $networkCapabilities")
-
+            Log.e(logName, "onCapabilitiesChanged: $network, $networkCapabilities")
             if (networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET)) {
-
                 if (networkCapabilities.hasTransport(TRANSPORT_WIFI)) {
-                    Log.d(
-                        logName,
-                        "Connected to a wifi network. Do not change connectivity status and start connectivity polling"
-                    )
-                    startPollingConnectivity()
+                    Log.d(logName, "Connected to a wifi network.")
                 } else {
                     Log.d(
                         logName,
-                        "Connected to a non-wifi network with NET_CAPABILITY_INTERNET. " +
-                            "Consider that internet connection is active. Do not start connectivity polling"
+                        "Connected to a non-wifi network with NET_CAPABILITY_INTERNET. "
                     )
-
-                    val newNetworkState = NetworkState(
-                        true,
-                        connectivityManager.getNetworkCapabilities(network)
-                            ?.let { getTransportFromNetworkCapabilities(it) }
-                    )
-                    setNetworkState(newNetworkState)
                 }
 
+                val newNetworkState = NetworkState(
+                    true,
+                    connectivityManager.getNetworkCapabilities(network)
+                        ?.let { getTransportFromNetworkCapabilities(it) }
+                )
+                setNetworkState(newNetworkState)
             } else {
-                //otherwise stop doing that and dispatch no connectivity state
-                stopConnectivityPolling()
                 val newNetworkState = NetworkState(
                     false,
                     connectivityManager.getNetworkCapabilities(network)
@@ -96,20 +77,16 @@ class YavinConnectivityProviderImpl(
 
         override fun onLost(network: Network) {
             Log.d(logName, "Network connection lost")
-            stopConnectivityPolling()
             setNetworkState(NetworkState(false))
         }
 
-        override fun onAvailable(network: Network) {
-            Log.d(logName, "New network is available")
-        }
     }
 
     private fun setNetworkState(newState: NetworkState) {
         if (newState != currentNetworkState) {
             Log.v(
                 logName,
-                "Connectivity state changed. Dispatching new state with hasInternet = ${newState.hasInternet}"
+                "Connectivity state changed. Dispatching new state with hasInternet = ${newState.hasInternetCapability}"
             )
             currentNetworkState = newState
             handler.post {
@@ -141,70 +118,11 @@ class YavinConnectivityProviderImpl(
             connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         currentNetworkState = if (capabilities != null) {
             NetworkState(
-                hasInternet = capabilities.hasCapability(NET_CAPABILITY_INTERNET),
+                hasInternetCapability = capabilities.hasCapability(NET_CAPABILITY_INTERNET),
                 networkTransportType = getTransportFromNetworkCapabilities(capabilities)
             )
         } else {
             NetworkState(false)
-        }
-    }
-
-    private fun stopConnectivityPolling() {
-        Log.v(logName, "stopPollingConnectivity()")
-        connectivityPollingJob?.cancel()
-        connectivityPollingJob = null
-    }
-
-    private fun startPollingConnectivity() {
-        if (connectivityPollingJob?.isActive == true) {
-            Log.v(
-                logName,
-                "connectivity polling job IS ACTIVE - ignore startPollingConnectivityService() invocation"
-            )
-            return
-        } else {
-            Log.v(
-                logName,
-                "connectivity polling job IS NOT ACTIVE - starting startPollingConnectivityService()"
-            )
-        }
-
-        connectivityPollingJob = coroutineScope.launch {
-            while (isActive) {
-                val hasConnectionToGoogle = connectToGoogleServer()
-                Log.v(logName, "hasConnectionToGoogle = $hasConnectionToGoogle")
-                withContext(Dispatchers.Main) {
-                    ensureActive()
-                    val capabilities =
-                        connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-                    val newNetworkState = NetworkState(
-                        hasInternet = hasConnectionToGoogle,
-                        networkTransportType = if (capabilities != null) {
-                            getTransportFromNetworkCapabilities(capabilities)
-                        } else {
-                            null
-                        }
-                    )
-                    setNetworkState(newNetworkState)
-                    delay(CONNECTIVITY_REQUEST_INTERVAL)
-                }
-            }
-        }
-    }
-
-    private fun connectToGoogleServer(): Boolean {
-        Log.v(logName, "connectToGoogleServer")
-        return try {
-            val socket = Socket()
-            socket.connect(
-                InetSocketAddress(GOOGLE_SERVICE_IP, GOOGLE_SERVICE_PORT),
-                GOOGLE_SERVICE_TIMEOUT
-            )
-            socket.close()
-            true
-        } catch (e: Exception) {
-            Log.v(logName, "connect to google server failed")
-            false
         }
     }
 
@@ -219,18 +137,10 @@ class YavinConnectivityProviderImpl(
 
     private fun verifySubscription() {
         if (!subscribed && listeners.isNotEmpty()) {
-            // As PAX A920 running API 25 has sometimes a long delay before
-            // NetworkCallback.onCapabilitiesChanged invocation
-            // (where we are 100% sure the capabilities and transport are guaranteed to be true)
-            // so we have to start polling instantly when 1st listener is subscribed and last known network type is wifi
-            if (currentNetworkState.hasInternet && currentNetworkState.networkTransportType == TRANSPORT_WIFI) {
-                startPollingConnectivity()
-            }
             registerNetworkCallback()
             subscribed = true
         } else if (subscribed && listeners.isEmpty()) {
             unregisterNetworkCallback()
-            stopConnectivityPolling()
             subscribed = false
         }
     }
@@ -250,8 +160,8 @@ class YavinConnectivityProviderImpl(
         connectivityManager.unregisterNetworkCallback(networkCallback)
     }
 
-    override fun hasInternet(): Boolean {
-        return getNetworkState().hasInternet
+    override fun hasInternetCapability(): Boolean {
+        return getNetworkState().hasInternetCapability
     }
 
     override fun isWifiEnabled() = wifiManager.isWifiEnabled
@@ -295,9 +205,31 @@ class YavinConnectivityProviderImpl(
         return null
     }
 
+    override suspend fun testRealInternetConnection(): Boolean {
+        Log.v(logName, "testRealInternetConnection")
+        return try {
+            val socket = Socket()
+            val requestStartTime = System.currentTimeMillis()
+            withContext(Dispatchers.IO) {
+                socket.connect(
+                    InetSocketAddress(GOOGLE_SERVICE_IP, GOOGLE_SERVICE_PORT),
+                    GOOGLE_SERVICE_TIMEOUT
+                )
+                socket.close()
+                Log.v(
+                    logName,
+                    "connect to google server succeeded. Time elapsed = ${System.currentTimeMillis() - requestStartTime} ms"
+                )
+                true
+            }
+        } catch (e: Exception) {
+            Log.v(logName, "connect to google server failed")
+            false
+        }
+    }
+
     companion object {
-        const val CONNECTIVITY_REQUEST_INTERVAL = 20000L
-        const val GOOGLE_SERVICE_TIMEOUT = 10000
+        const val GOOGLE_SERVICE_TIMEOUT = 5000
         const val GOOGLE_SERVICE_IP = "8.8.8.8"
         const val GOOGLE_SERVICE_PORT = 53
     }

@@ -17,3 +17,6 @@
 local.properties
 /*.jks
 release.properties
+/.idea
+*.hprof
+app/release/
