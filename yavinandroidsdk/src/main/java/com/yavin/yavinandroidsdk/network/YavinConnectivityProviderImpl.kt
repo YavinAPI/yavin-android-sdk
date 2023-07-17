@@ -229,7 +229,7 @@ class YavinConnectivityProviderImpl(
     }
 
     companion object {
-        const val GOOGLE_SERVICE_TIMEOUT = 5000
+        const val GOOGLE_SERVICE_TIMEOUT = 1500
         const val GOOGLE_SERVICE_IP = "8.8.8.8"
         const val GOOGLE_SERVICE_PORT = 53
     }
