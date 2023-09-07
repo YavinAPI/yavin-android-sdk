@@ -11,4 +11,4 @@ plugins {
 
 
 group = "com.github.YavinAPI"
-version = "1.4.0"
+version = "2.0.1"

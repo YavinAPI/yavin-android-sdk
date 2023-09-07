@@ -77,7 +77,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "com.github.YavinAPI"
             artifactId = "yavin-android-sdk"
-            version = "1.4.0"
+            version = "2.0.1"
 
             afterEvaluate {
                 from(components["release"])
