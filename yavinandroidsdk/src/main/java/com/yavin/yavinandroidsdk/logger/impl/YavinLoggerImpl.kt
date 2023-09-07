@@ -185,7 +185,7 @@ class YavinLoggerImpl(
             .getInstance(application.applicationContext)
             .enqueueUniquePeriodicWork(
                 NAME_CLEANER_WORKER,
-                ExistingPeriodicWorkPolicy.REPLACE,
+                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
                 cleanerWorkerRequest
             )
         return this
