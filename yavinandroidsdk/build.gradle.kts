@@ -6,6 +6,7 @@ plugins {
     id("androidx.navigation.safeargs")
     id("dagger.hilt.android.plugin")
     id("com.google.devtools.ksp")
+    id("maven-publish")
 }
 
 android {
@@ -30,12 +31,23 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
+    }
+}
+
+publishing {
+    publications {
+        // DEV libraries
+        create("release", MavenPublication::class.java) {
+            groupId = "com.github.YavinAPI"
+            artifactId = "yavin-android-sdk"
+            version = "2.0.0"
+        }
     }
 }
 
