@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "YavinAndroidSDK"
-include ':app'
-include ':yavinandroidsdk'
+include(":app")
+include (":yavinandroidsdk")
