@@ -8,3 +8,7 @@ plugins {
     id("com.google.dagger.hilt.android") version "2.48" apply false
     id("androidx.navigation.safeargs") version "2.5.3" apply false
 }
+
+
+group = "com.github.YavinAPI"
+version = "1.4.0"

@@ -24,23 +24,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    signingConfigs {
-        create("release-signing") {
-            val signingPropertiesFile = project.file("../release.properties")
-            if (signingPropertiesFile.canRead()) {
-                val properties = Properties()
-                properties.load(FileInputStream(signingPropertiesFile))
-
-                storeFile = file(properties["keystorePath"] as String)
-                storePassword = properties["keystorePassword"] as String
-                keyAlias = properties["keyAlias"] as String
-                keyPassword = properties["keyPassword"] as String
-            } else {
-                println("Unable to read release.properties")
-            }
-        }
-    }
-
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
@@ -49,7 +32,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release-signing")
         }
     }
 

@@ -3,7 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
     id("kotlinx-serialization")
-    id("androidx.navigation.safeargs")
     id("dagger.hilt.android.plugin")
     id("com.google.devtools.ksp")
     id("maven-publish")
@@ -38,15 +37,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-}
 
-publishing {
-    publications {
-        // DEV libraries
-        create("release", MavenPublication::class.java) {
-            groupId = "com.github.YavinAPI"
-            artifactId = "yavin-android-sdk"
-            version = "2.0.0"
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
         }
     }
 }
@@ -76,4 +70,18 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.github.YavinAPI"
+            artifactId = "yavin-android-sdk"
+            version = "1.4.0"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
 }
