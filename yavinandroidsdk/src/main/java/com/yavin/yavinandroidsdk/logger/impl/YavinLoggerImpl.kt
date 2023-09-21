@@ -22,9 +22,10 @@ import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
 import com.yavin.yavinandroidsdk.logger.utils.getCrashText
 import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerUploaderWorker
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
+import io.getstream.log.Priority
 import io.getstream.log.StreamLog
-import io.getstream.log.file.FileStreamLogger
 import io.getstream.log.streamLog
+import io.getstream.logging.file.FileStreamLogger
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -147,6 +148,10 @@ class YavinLoggerImpl(
         )
         fileLogger = FileStreamLogger(fileLoggerConfig)
 
+        StreamLog.setValidator { priority, _ ->
+            priority.level >= Priority.DEBUG.level
+        }
+
         StreamLog.install(fileLogger)
 
         return this
@@ -196,6 +201,10 @@ class YavinLoggerImpl(
         fileLogger.share {
             callback(it)
         }
+    }
+
+    override fun clearLogs() {
+        fileLogger.clear()
     }
 
     override fun launchUploaderWorker(context: Context): LiveData<List<WorkInfo>> {

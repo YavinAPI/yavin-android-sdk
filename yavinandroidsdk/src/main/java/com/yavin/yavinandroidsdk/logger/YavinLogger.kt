@@ -19,6 +19,7 @@ interface YavinLogger {
     fun log(message: String)
     fun log(action: Action)
     fun share(callback: (File) -> Unit)
+    fun clearLogs()
 
     interface YavinLoggerCallback {
         fun onAppCrashed(exception: Throwable)

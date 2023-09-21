@@ -57,8 +57,8 @@ dependencies {
 
     implementation("androidx.work:work-runtime-ktx:2.8.1")
 
-    implementation("io.getstream:stream-log-android:1.1.4")
-    implementation("io.getstream:stream-log-android-file:1.1.4")
+    implementation("io.getstream:stream-log:1.1.4")
+    implementation("io.getstream:stream-log-file:1.1.4")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.44")
@@ -80,7 +80,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "com.github.YavinAPI"
             artifactId = "yavin-android-sdk"
-            version = "3.0.0-SNAPSHOT-v2"
+            version = "3.0.0-SNAPSHOT-v3"
 
             afterEvaluate {
                 from(components["release"])

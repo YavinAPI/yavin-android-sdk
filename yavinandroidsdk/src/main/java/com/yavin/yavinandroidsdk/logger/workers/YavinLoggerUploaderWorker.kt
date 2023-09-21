@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
@@ -15,10 +16,14 @@ import androidx.work.WorkerParameters
 import com.yavin.yavinandroidsdk.R
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.repository.IYavinLoggerUploaderRepository
+import com.yavin.yavinandroidsdk.logger.utils.YavinLoggerConstants
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class YavinLoggerUploaderWorker constructor(
     context: Context,
@@ -33,6 +38,13 @@ class YavinLoggerUploaderWorker constructor(
 
         private const val TAG_COMMON = "yavin_logger_uploader"
         private const val TAG_UPLOAD_PREFIX = TAG_COMMON + "_"
+
+        const val KEY_OUTPUT_DATA_RESULT = TAG_UPLOAD_PREFIX + "result"
+        const val KEY_OUTPUT_DATA_RETRIEVED_FILE_FAILURE =
+            TAG_UPLOAD_PREFIX + "RETRIEVED_FILE_FAILURE"
+
+        private val dateFilenameFormatter =
+            SimpleDateFormat(YavinLoggerConstants.DATE_FORMAT, Locale.US)
 
         private val uploaderWorkerBuilder = OneTimeWorkRequestBuilder<YavinLoggerUploaderWorker>()
             .addTag(TAG_COMMON)
@@ -51,22 +63,43 @@ class YavinLoggerUploaderWorker constructor(
     }
 
     override suspend fun doWork() = withContext(Dispatchers.IO) {
-        val result = CompletableDeferred<File>()
+        val deferred = CompletableDeferred<File?>()
 
-        yavinLogger.share { fileToUpload ->
-            val newFile = File(fileToUpload.parentFile, "to_upload.txt")
+        yavinLogger.share { file ->
+            val date = Date()
+            val newFilename = "${dateFilenameFormatter.format(date)}.txt"
+            val newFile = File(file.parentFile, newFilename)
+
             if (newFile.exists()) {
                 newFile.delete()
             }
 
-            if (fileToUpload.renameTo(newFile)) {
-                result.complete(newFile)
+            if (file.renameTo(newFile)) {
+                deferred.complete(newFile)
             } else {
-                result.complete(fileToUpload)
+                deferred.complete(null)
             }
         }
 
-        return@withContext repository.uploadFile(applicationContext, result.await())
+        val fileToUpload = deferred.await() ?: kotlin.run {
+            val outputData = Data.Builder().apply {
+                putString(KEY_OUTPUT_DATA_RESULT, KEY_OUTPUT_DATA_RETRIEVED_FILE_FAILURE)
+            }.build()
+            return@withContext Result.failure(outputData)
+        }
+
+        val uploadResult = repository.uploadFile(applicationContext, fileToUpload)
+
+        // Remove fileToUpload because it is a copy of internal logs file
+        if (fileToUpload.exists()) {
+            fileToUpload.delete()
+        }
+
+        if (uploadResult is Result.Success) {
+            yavinLogger.clearLogs()
+        }
+
+        return@withContext uploadResult
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
