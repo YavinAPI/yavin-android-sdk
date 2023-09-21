@@ -14,7 +14,6 @@ import com.yavin.yavinandroidsdk.demo.model.Person
 import com.yavin.yavinandroidsdk.demo.model.toText
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.actions.Action
-import com.yavin.yavinandroidsdk.logger.ui.YavinLoggerUI
 import com.yavin.yavinandroidsdk.network.YavinConnectivityProvider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -24,7 +23,7 @@ import java.util.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
+class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -81,8 +80,8 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
             findNavController().navigate(HomeFragmentDirections.actionHomeFragmentToDetailsFragment())
         }
 
-        binding.datePickerButton.setOnClickListener {
-            showDatePicker()
+        binding.uploadLogsButton.setOnClickListener {
+            simulateUploadLogFile()
         }
 
         binding.logButton.setOnClickListener {
@@ -98,7 +97,7 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         }
 
         binding.broadcastUploadButton.setOnClickListener {
-            broadcastUpload(Date())
+            broadcastUpload()
         }
 
         binding.checkMobileDataButton.setOnClickListener {
@@ -110,9 +109,8 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         }
     }
 
-    private fun showDatePicker() {
-        YavinLoggerUI.buildDatePicker(requireContext(), yavinLogger, this)
-            .show(childFragmentManager, "datePicker")
+    private fun simulateUploadLogFile() {
+        yavinLogger.launchUploaderWorker(requireContext())
     }
 
     private fun logClick() {
@@ -135,8 +133,8 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
         }
     }
 
-    private fun broadcastUpload(date: Date) {
-        yavinLogger.broadcastLogsUpload(requireContext(), date)
+    private fun broadcastUpload() {
+        yavinLogger.broadcastLogsUpload(requireContext())
     }
 
     private fun checkMobileConnection() {
@@ -154,9 +152,5 @@ class HomeFragment : Fragment(), YavinLoggerUI.YavinLoggerUICallback {
             )
                 .show()
         }
-    }
-
-    override fun onYavinLoggerFileSelected(date: Date) {
-        // Get log file from date
     }
 }

@@ -6,7 +6,6 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import com.yavin.yavinandroidsdk.logger.YavinLogger
 import com.yavin.yavinandroidsdk.logger.repository.IYavinLoggerUploaderRepository
-import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerCleanerWorker
 import com.yavin.yavinandroidsdk.logger.workers.YavinLoggerUploaderWorker
 
 class YavinLoggerWorkerFactory(
@@ -20,8 +19,13 @@ class YavinLoggerWorkerFactory(
         workerParameters: WorkerParameters
     ): ListenableWorker? {
         return when (workerClassName) {
-            YavinLoggerCleanerWorker::class.java.name -> YavinLoggerCleanerWorker(appContext, workerParameters, yavinLogger)
-            YavinLoggerUploaderWorker::class.java.name -> YavinLoggerUploaderWorker(appContext, workerParameters, yavinLogger, uploaderRepository)
+            YavinLoggerUploaderWorker::class.java.name -> YavinLoggerUploaderWorker(
+                appContext,
+                workerParameters,
+                yavinLogger,
+                uploaderRepository
+            )
+
             else ->
                 // Return null, so that the base class can delegate to the default WorkerFactory.
                 null
