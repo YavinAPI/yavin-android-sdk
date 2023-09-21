@@ -18,7 +18,7 @@ object LogsUtils {
             val className = element.className.substringAfterLast(".")
             val methodName = "${element.methodName}()"
             val line = element.lineNumber
-            "$className.[$methodName:$line]"
+            "$className.$methodName:$line"
         } catch (e: Exception) {
             if (stackTrace.isNotEmpty()) stackTrace.last().methodName else "NoStackTrace"
         }

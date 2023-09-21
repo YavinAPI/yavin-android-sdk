@@ -20,6 +20,15 @@ class YavinFilesManagerImpl : YavinFilesManager {
         return root
     }
 
+    override fun getDirectory(context: Context, directoryName: String): File {
+        val root = getRootFolder(context)
+
+        val directory = File(root, directoryName)
+        directory.mkdirs()
+
+        return directory
+    }
+
     override fun getFileFromDirectory(context: Context, directoryName: String, fileName: String): File {
         val root = getRootFolder(context)
 

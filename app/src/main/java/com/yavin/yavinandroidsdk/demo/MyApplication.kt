@@ -34,13 +34,9 @@ class MyApplication : Application(), Configuration.Provider, YavinLogger.YavinLo
 
         yavinLogger.init(this, BuildConfig.APPLICATION_ID, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
             .setCrashInterceptor(this)
-            .setActivityLifecycleCallbacks()
+            .setActivityLifecycleCallbacks(this)
             .setNavControllerDestinationChangeListener()
             .setConnectivityListener(false)
-            .registerCleanerWorker(30)
-
-        // Upload today's log file
-        yavinLogger.launchUploaderWorker(this, Date())
     }
 
     override fun onAppCrashed(exception: Throwable) {
