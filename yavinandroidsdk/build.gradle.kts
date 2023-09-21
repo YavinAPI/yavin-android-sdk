@@ -4,7 +4,7 @@ plugins {
     id("kotlin-parcelize")
     id("kotlinx-serialization")
     id("dagger.hilt.android.plugin")
-    id("com.google.devtools.ksp")
+    kotlin("kapt")
     id("maven-publish")
 }
 
@@ -30,12 +30,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
 
     publishing {
@@ -57,11 +57,14 @@ dependencies {
 
     implementation("androidx.work:work-runtime-ktx:2.8.1")
 
+    implementation("io.getstream:stream-log:1.1.4")
+    implementation("io.getstream:stream-log-file:1.1.4")
+
     // Hilt
-    implementation("com.google.dagger:hilt-android:2.48")
-    ksp("com.google.dagger:hilt-android-compiler:2.48")
+    implementation("com.google.dagger:hilt-android:2.44")
+    kapt("com.google.dagger:hilt-android-compiler:2.44")
     implementation("androidx.hilt:hilt-work:1.0.0")
-    ksp("androidx.hilt:hilt-compiler:1.0.0")
+    kapt("androidx.hilt:hilt-compiler:1.0.0")
 
     val coroutinesVersion = "1.6.0"
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
@@ -77,7 +80,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "com.github.YavinAPI"
             artifactId = "yavin-android-sdk"
-            version = "2.0.1"
+            version = "3.0.0-SNAPSHOT-v3"
 
             afterEvaluate {
                 from(components["release"])

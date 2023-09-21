@@ -11,23 +11,15 @@ import java.util.*
 interface YavinLogger {
     fun init(application: Application, applicationName: String, applicationVersionName: String, applicationVersionCode: Int): YavinLogger
     fun setCrashInterceptor(callback: YavinLoggerCallback): YavinLogger
-    fun setActivityLifecycleCallbacks(): YavinLogger
+    fun setActivityLifecycleCallbacks(application: Application): YavinLogger
     fun setNavControllerDestinationChangeListener(): YavinLogger
     fun setConnectivityListener(useActivityLifecycle: Boolean): YavinLogger
-    fun registerCleanerWorker(deleteAfterInDays: Int = 30): YavinLogger
-    fun getNumberOfDaysBeforeCleaning(): Int
-
-    fun launchUploaderWorker(context: Context, date: Date): LiveData<List<WorkInfo>>
-    fun broadcastLogsUpload(context: Context, date: Date)
-
+    fun launchUploaderWorker(context: Context): LiveData<List<WorkInfo>>
+    fun broadcastLogsUpload(context: Context)
     fun log(message: String)
     fun log(action: Action)
-
-    fun getLogsFiles(context: Context): List<File>
-    fun getLogsFile(context: Context, date: Date): File
-
-    fun getArchivesFiles(context: Context): List<File>
-    fun getArchivesFile(context: Context, date: Date): File
+    fun share(callback: (File) -> Unit)
+    fun clearLogs()
 
     interface YavinLoggerCallback {
         fun onAppCrashed(exception: Throwable)
