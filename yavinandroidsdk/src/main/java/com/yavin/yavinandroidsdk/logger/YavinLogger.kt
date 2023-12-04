@@ -6,10 +6,16 @@ import androidx.lifecycle.LiveData
 import androidx.work.WorkInfo
 import com.yavin.yavinandroidsdk.logger.actions.Action
 import java.io.File
-import java.util.*
 
 interface YavinLogger {
-    fun init(application: Application, applicationName: String, applicationVersionName: String, applicationVersionCode: Int): YavinLogger
+    fun init(
+        application: Application,
+        applicationName: String,
+        applicationVersionName: String,
+        applicationVersionCode: Int,
+        maxLogSize: Int = 12 * 1024 * 1024
+    ): YavinLogger
+
     fun setCrashInterceptor(callback: YavinLoggerCallback): YavinLogger
     fun setActivityLifecycleCallbacks(application: Application): YavinLogger
     fun setNavControllerDestinationChangeListener(): YavinLogger
