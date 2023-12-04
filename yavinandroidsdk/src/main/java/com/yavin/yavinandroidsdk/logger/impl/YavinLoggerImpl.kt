@@ -164,7 +164,7 @@ class YavinLoggerImpl(
     override fun setCrashInterceptor(callback: YavinLogger.YavinLoggerCallback): YavinLogger {
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
-            internalLog(exception.getCrashText())
+            internalLog(exception.getCrashText(), false)
             callback.onAppCrashed(exception)
 
             defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
@@ -229,7 +229,7 @@ class YavinLoggerImpl(
         }
     }
 
-    private fun internalLog(message: String, fromLogger: Boolean = false) {
+    private fun internalLog(message: String, fromLogger: Boolean) {
         try {
             val tag = if (fromLogger) {
                 "YavinLogger"
@@ -245,11 +245,11 @@ class YavinLoggerImpl(
     }
 
     override fun log(message: String) {
-        internalLog(message)
+        internalLog(message, false)
     }
 
     override fun log(action: Action) {
-        internalLog(action.describeAction())
+        internalLog(action.describeAction(), false)
     }
 
     override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
