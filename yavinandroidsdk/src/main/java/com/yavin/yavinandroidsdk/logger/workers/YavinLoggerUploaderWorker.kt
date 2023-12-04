@@ -95,10 +95,6 @@ class YavinLoggerUploaderWorker constructor(
             fileToUpload.delete()
         }
 
-        if (uploadResult is Result.Success) {
-            yavinLogger.clearLogs()
-        }
-
         return@withContext uploadResult
     }
 

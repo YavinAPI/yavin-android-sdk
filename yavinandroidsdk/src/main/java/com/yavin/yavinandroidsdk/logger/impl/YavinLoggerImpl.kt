@@ -53,7 +53,10 @@ class YavinLoggerImpl(
                 destination.label?.toString() ?: applicationContext.resources.getResourceEntryName(
                     destination.id
                 )
-            internalLog("Destination changed to screen with label \"$label\".")
+            internalLog(
+                message = "Destination changed to screen with label \"$label\".",
+                fromLogger = true
+            )
         }
 
     private var activityLifecycleState: String? = null
@@ -62,15 +65,15 @@ class YavinLoggerImpl(
 
     private val activityCallback = object : Application.ActivityLifecycleCallbacks {
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-            onActivityStateChanged(activity.localClassName, "CREATED")
+            onActivityStateChanged(activity, "CREATED")
         }
 
         override fun onActivityStarted(activity: Activity) {
-            onActivityStateChanged(activity.localClassName, "STARTED")
+            onActivityStateChanged(activity, "STARTED")
         }
 
         override fun onActivityResumed(activity: Activity) {
-            onActivityStateChanged(activity.localClassName, "RESUMED")
+            onActivityStateChanged(activity, "RESUMED")
 
             if (registerNavControllerDestinationChangedListener) {
                 if (activity is YavinLoggerNavigableActivity) {
@@ -91,7 +94,7 @@ class YavinLoggerImpl(
         }
 
         override fun onActivityPaused(activity: Activity) {
-            onActivityStateChanged(activity.localClassName, "PAUSED")
+            onActivityStateChanged(activity, "PAUSED")
 
             if (registerNavControllerDestinationChangedListener) {
                 if (activity is YavinLoggerNavigableActivity) {
@@ -112,15 +115,15 @@ class YavinLoggerImpl(
         }
 
         override fun onActivityStopped(activity: Activity) {
-            onActivityStateChanged(activity.localClassName, "STOPPED")
+            onActivityStateChanged(activity, "STOPPED")
         }
 
         override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-            onActivityStateChanged(activity.localClassName, "SAVE_INSTANCE_STATE")
+            onActivityStateChanged(activity, "SAVE_INSTANCE_STATE")
         }
 
         override fun onActivityDestroyed(activity: Activity) {
-            onActivityStateChanged(activity.localClassName, "DESTROYED")
+            onActivityStateChanged(activity, "DESTROYED")
         }
     }
 
@@ -128,13 +131,14 @@ class YavinLoggerImpl(
         application: Application,
         applicationName: String,
         applicationVersionName: String,
-        applicationVersionCode: Int
+        applicationVersionCode: Int,
+        maxLogSize: Int
     ): YavinLogger {
         val logsDir =
             yavinFilesManager.getDirectory(application, YavinLoggerConstants.LOG_DIRECTORY)
 
         val fileLoggerConfig = FileStreamLogger.Config(
-            maxLogSize = 4 * 1024 * 1024,
+            maxLogSize = maxLogSize,
             filesDir = logsDir, // an internal file directory
             externalFilesDir = logsDir, // an external file directory. This is an optional.
             app = FileStreamLogger.Config.App( // application information.
@@ -142,7 +146,7 @@ class YavinLoggerImpl(
                 versionName = applicationVersionName
             ),
             device = FileStreamLogger.Config.Device( // device information
-                model = "%s %s".format(Build.MANUFACTURER, Build.DEVICE),
+                model = "%s %s".format(Build.MANUFACTURER, Build.MODEL),
                 androidApiLevel = Build.VERSION.SDK_INT
             )
         )
@@ -160,7 +164,7 @@ class YavinLoggerImpl(
     override fun setCrashInterceptor(callback: YavinLogger.YavinLoggerCallback): YavinLogger {
         defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
-            internalLog(exception.getCrashText())
+            internalLog(exception.getCrashText(), false)
             callback.onAppCrashed(exception)
 
             defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
@@ -179,9 +183,9 @@ class YavinLoggerImpl(
         return this
     }
 
-    private fun onActivityStateChanged(activityName: String, state: String) {
+    private fun onActivityStateChanged(activity: Activity, state: String) {
         activityLifecycleState = state
-        internalLog("Activity \"$activityName\" state is: $state")
+        internalLog("$activity $state", fromLogger = true)
     }
 
     override fun setConnectivityListener(useActivityLifecycle: Boolean): YavinLogger {
@@ -225,9 +229,15 @@ class YavinLoggerImpl(
         }
     }
 
-    private fun internalLog(message: String) {
+    private fun internalLog(message: String, fromLogger: Boolean) {
         try {
-            streamLog(tag = LogsUtils.getCallerInfo(Thread.currentThread())) { message }
+            val tag = if (fromLogger) {
+                "YavinLogger"
+            } else {
+                LogsUtils.getCallerInfo(Thread.currentThread())
+            }
+
+            streamLog(tag = tag) { message }
         } catch (ex: Throwable) {
             ex.printStackTrace()
             Log.e("YavinLogger", "Crashed caused by: ${ex.message}")
@@ -235,11 +245,11 @@ class YavinLoggerImpl(
     }
 
     override fun log(message: String) {
-        internalLog(message)
+        internalLog(message, false)
     }
 
     override fun log(action: Action) {
-        internalLog(action.describeAction())
+        internalLog(action.describeAction(), false)
     }
 
     override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
@@ -250,7 +260,8 @@ class YavinLoggerImpl(
             else -> "UNKNOWN (${state.networkTransportType})"
         }
         internalLog(
-            "Connectivity changed: (type: $networkType, has Internet: ${state.hasInternetCapability})."
+            message = "Connectivity changed: (type: $networkType, has Internet: ${state.hasInternetCapability}).",
+            fromLogger = true
         )
     }
 }
