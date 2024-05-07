@@ -254,8 +254,8 @@ class YavinLoggerImpl(
 
     override fun onConnectivityStateChange(state: YavinConnectivityProvider.NetworkState) {
         val networkType = when (state.networkTransportType) {
-            NetworkCapabilities.TRANSPORT_WIFI -> "WIFI"
-            NetworkCapabilities.TRANSPORT_ETHERNET -> "ETHERNET"
+            NetworkCapabilities.TRANSPORT_WIFI -> String.format("%s (%s)", "WIFI", yavinConnectivityProvider.getLocalIpAddress())
+            NetworkCapabilities.TRANSPORT_ETHERNET -> String.format("%s (%s)", "ETHERNET", yavinConnectivityProvider.getLocalIpAddress())
             NetworkCapabilities.TRANSPORT_CELLULAR -> "CELLULAR"
             else -> "UNKNOWN (${state.networkTransportType})"
         }
